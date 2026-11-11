@@ -49,6 +49,11 @@ public class FerrumSettingsActivity extends BaseFragment {
     }
 
     @Override
+    protected boolean useSimpleActionBar() {
+        return true;
+    }
+
+    @Override
     public View createView(Context context) {
         simpleActionBar.setBackButtonImage(R.drawable.ic_ab_back);
         simpleActionBar.setTitle("Ferrum");
