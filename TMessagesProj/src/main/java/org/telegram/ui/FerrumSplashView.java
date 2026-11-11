@@ -31,7 +31,7 @@ public final class FerrumSplashView extends View {
 
         backgroundPaint.setShader(new LinearGradient(
                 0, 0, 0, 1,
-                new int[]{0xFF171719, 0xFF080809, 0xFF030303},
+                new int[]{0xFF080B12, 0xFF05070C, 0xFF030303},
                 null, Shader.TileMode.CLAMP));
 
         haloPaint.setStyle(Paint.Style.STROKE);

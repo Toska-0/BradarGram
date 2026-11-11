@@ -27,6 +27,7 @@ import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
@@ -90,6 +91,7 @@ public class FerrumSettingsActivity extends BaseFragment {
 
         FrameLayout frame = new FrameLayout(context);
         fragmentView = frame;
+        frame.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
         rebuildRows(context);
         listView = new RecyclerListView(context);
         listView.setLayoutManager(new LinearLayoutManager(context));
@@ -325,6 +327,4 @@ public class FerrumSettingsActivity extends BaseFragment {
         } catch(Exception e){Toast.makeText(c,"Ошибка: "+e.getMessage(),Toast.LENGTH_LONG).show();}
     }
 
-    @Override protected RecyclerListView getListViewForSimpleGlass(){return listView;}
-    @Override public boolean isSupportEdgeToEdge(){return true;}
 }
