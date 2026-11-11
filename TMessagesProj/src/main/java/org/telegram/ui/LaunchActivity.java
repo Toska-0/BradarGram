@@ -531,6 +531,12 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
             }
         });
         setupActionBarLayout();
+        if (UserConfig.getInstance(currentAccount).isClientActivated()) {
+            FerrumSplashView ferrumSplash = new FerrumSplashView(this);
+            frameLayout.addView(ferrumSplash, new FrameLayout.LayoutParams(-1, -1));
+            ferrumSplash.postDelayed(() -> ferrumSplash.animate().alpha(0f).setDuration(220)
+                    .withEndAction(() -> frameLayout.removeView(ferrumSplash)).start(), 1450);
+        }
         drawerLayoutContainer.setParentActionBarLayout(actionBarLayout);
         actionBarLayout.setDrawerLayoutContainer(drawerLayoutContainer);
         actionBarLayout.setFragmentStack(mainFragmentsStack);
