@@ -3,534 +3,324 @@ package org.telegram.ui;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.net.Uri;
-import android.view.Gravity;
-import android.view.View;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.EditText;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.text.InputType;
-import android.widget.ScrollView;
-import android.widget.SeekBar;
-import android.widget.TextView;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FerrumConfig;
 import org.telegram.messenger.FerrumAntivirus;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.ModConfig;
 import org.telegram.messenger.ModTheme;
 import org.telegram.messenger.ModUtils;
 import org.telegram.messenger.R;
+import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
-import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Cells.HeaderCell;
+import org.telegram.ui.Cells.TextCheckCell;
+import org.telegram.ui.Cells.TextInfoPrivacyCell;
+import org.telegram.ui.Cells.TextSettingsCell;
+import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.RecyclerListView;
+
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 
 /**
- * Ferrum's dedicated settings screen. Preferences are stored locally and remain
- * independent from Telegram authentication/session data.
+ * Ferrum settings rendered with Telegram's native settings cells and theme.
+ * All preference values remain stored by FerrumConfig / ModConfig.
  */
 public class FerrumSettingsActivity extends BaseFragment {
-
     private static final int REQUEST_BANNER = 7101;
     private static final int REQUEST_SCAN = 7102;
     private static final int REQUEST_EXPORT = 7103;
     private static final int REQUEST_IMPORT = 7104;
-    private LinearLayout content;
-    private TextView bannerStatus;
-    private TextView ringWidthLabel;
-    private ModBlurPreviewView legacyBlurPreview;
-    private ModColorPreviewView legacyColorPreview;
 
-    public FerrumSettingsActivity() {
-        super();
+    private static final int HEADER = 0;
+    private static final int CHECK = 1;
+    private static final int VALUE = 2;
+    private static final int INFO = 3;
+
+    private static final int ACCENT = 1, BANNER_PICK = 2, BANNER_REMOVE = 3,
+            BANNER_SCALE = 4, BANNER_X = 5, BANNER_Y = 6,
+            AVATAR_RING = 7, AVATAR_WIDTH = 8, AVATAR_COLOR = 9, AVATAR_STYLE = 10,
+            AV_ENGINE = 11, AI_PROVIDER = 12, AI_KEY = 13, VT_KEY = 14,
+            EXPORT = 15, IMPORT = 16, SCAN = 17, COLOR_PACK = 18;
+    private static final int NO_TYPING = 30, NO_READ = 31, SAVE_DELETED = 32,
+            CONFIRM_CALLS = 33, LOCAL_PREMIUM = 34, HIDE_PREMIUM = 35,
+            HIDE_STARS = 36, NO_BLUR = 37;
+
+    private static class Row {
+        int type, id;
+        String title, value;
+        boolean checked;
+        Row(int type, int id, String title, String value, boolean checked) {
+            this.type = type; this.id = id; this.title = title; this.value = value; this.checked = checked;
+        }
     }
+
+    private final ArrayList<Row> rows = new ArrayList<>();
+    private RecyclerListView listView;
+    private ListAdapter adapter;
 
     @Override
-    protected boolean useSimpleActionBar() {
-        return true;
-    }
+    protected boolean useSimpleActionBar() { return true; }
 
     @Override
     public View createView(Context context) {
+        setHasOwnBackground(true);
         simpleActionBar.setBackButtonImage(R.drawable.ic_ab_back);
         simpleActionBar.setTitle("Ferrum");
-        simpleActionBar.setActionBarMenuOnItemClick(new org.telegram.ui.ActionBar.ActionBar.ActionBarMenuOnItemClick() {
-            @Override
-            public void onItemClick(int id) {
-                if (id == -1) finishFragment();
-            }
+        simpleActionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
+            @Override public void onItemClick(int id) { if (id == -1) finishFragment(); }
         });
 
-        ScrollView scroll = new ScrollView(context);
-        scroll.setFillViewport(true);
-        scroll.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
-        content = new LinearLayout(context);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(14), AndroidUtilities.dp(16), AndroidUtilities.dp(28));
-        scroll.addView(content, new ScrollView.LayoutParams(-1, -2));
-
-        addIntro(context);
-        addAccentSection(context);
-        addBannerSection(context);
-        addAvatarSection(context);
-        addSecuritySection(context);
-        addLegacySection(context);
-        addSyncSection(context);
-
-        fragmentView = scroll;
+        FrameLayout frame = new FrameLayout(context);
+        fragmentView = frame;
+        rebuildRows(context);
+        listView = new RecyclerListView(context);
+        listView.setLayoutManager(new LinearLayoutManager(context));
+        listView.setVerticalScrollBarEnabled(false);
+        listView.setAdapter(adapter = new ListAdapter(context));
+        listView.setOnItemClickListener((view, position) -> {
+            if (position >= 0 && position < rows.size()) onRowClick(rows.get(position));
+        });
+        frame.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         return fragmentView;
     }
 
-    private void addIntro(Context context) {
-        TextView intro = new TextView(context);
-        intro.setText("Персонализация и дополнительные возможности Ferrum. Настройки оформления хранятся на этом устройстве.");
-        intro.setTextSize(14);
-        intro.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-        intro.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(2), AndroidUtilities.dp(4), AndroidUtilities.dp(14));
-        content.addView(intro, new LinearLayout.LayoutParams(-1, -2));
+    private void header(String title) { rows.add(new Row(HEADER, 0, title, null, false)); }
+    private void check(int id, String title, boolean checked) { rows.add(new Row(CHECK, id, title, null, checked)); }
+    private void value(int id, String title, String value) { rows.add(new Row(VALUE, id, title, value, false)); }
+    private void info(String text) { rows.add(new Row(INFO, 0, text, null, false)); }
+
+    private void rebuildRows(Context c) {
+        rows.clear();
+        header("ОФОРМЛЕНИЕ");
+        value(ACCENT, "Акцентный цвет", "Изменить");
+        check(NO_BLUR, "Отключить размытие и Liquid Glass", ModConfig.isNoBlur());
+        value(COLOR_PACK, "Цветовая палитра", packName(ModConfig.getColorPack()));
+        info("Изменения размытия могут потребовать перезапуска приложения.");
+
+        header("БАННЕР ПРОФИЛЯ");
+        value(BANNER_PICK, "Выбрать изображение", "Галерея");
+        value(BANNER_REMOVE, "Удалить баннер", null);
+        value(BANNER_SCALE, "Масштаб баннера", percent(FerrumConfig.getBannerScale(c)));
+        value(BANNER_X, "Положение по горизонтали", percent(FerrumConfig.getBannerOffsetX(c)));
+        value(BANNER_Y, "Положение по вертикали", percent(FerrumConfig.getBannerOffsetY(c)));
+
+        header("АВАТАР");
+        check(AVATAR_RING, "Включить обводку аватара", FerrumConfig.isAvatarRingEnabled(c));
+        value(AVATAR_WIDTH, "Толщина обводки", String.valueOf(FerrumConfig.getAvatarRingWidth(c)));
+        value(AVATAR_COLOR, "Цвет обводки", "Выбрать");
+        value(AVATAR_STYLE, "Стиль обводки", ringStyle(FerrumConfig.getAvatarRingStyle(c)));
+
+        header("БЕЗОПАСНОСТЬ");
+        check(40, "Показывать пункт проверки файлов", FerrumConfig.isAntivirusEnabled(c));
+        value(AV_ENGINE, "Движок анализа", FerrumConfig.getAntivirusEngine(c) == FerrumConfig.ANTIVIRUS_ENGINE_VIRUSTOTAL ? "VirusTotal" : "AI-анализ");
+        value(AI_PROVIDER, "AI-провайдер", FerrumConfig.getAiProvider(c));
+        value(AI_KEY, "API-ключ AI", masked(FerrumConfig.getAiApiKey(c)));
+        value(VT_KEY, "API-ключ VirusTotal", masked(FerrumConfig.getVirusTotalApiKey(c)));
+        value(SCAN, "Проверить файл", "Выбрать файл");
+        info("Сетевые запросы к AI и VirusTotal пока не подключены. Доступен локальный эвристический анализ.");
+
+        header("ПРИВАТНОСТЬ И СООБЩЕНИЯ");
+        check(NO_TYPING, "Не отправлять статус «печатает…»", ModConfig.get(ModConfig.KEY_NO_TYPING));
+        check(NO_READ, "Читать без отметки о прочтении", ModConfig.get(ModConfig.KEY_NO_READ));
+        check(SAVE_DELETED, "Сохранять удалённые сообщения", ModConfig.get(ModConfig.KEY_SAVE_DELETED));
+        check(CONFIRM_CALLS, "Подтверждать исходящие звонки", ModConfig.get(ModConfig.KEY_CONFIRM_CALLS));
+
+        header("TELEGRAM");
+        check(LOCAL_PREMIUM, "Локальный Telegram Premium", ModConfig.get(ModConfig.KEY_LOCAL_PREMIUM));
+        check(HIDE_PREMIUM, "Скрыть Telegram Premium", ModConfig.get(ModConfig.KEY_HIDE_PREMIUM));
+        check(HIDE_STARS, "Скрыть Telegram Stars", ModConfig.get(ModConfig.KEY_HIDE_STARS));
+        info("Локальный Premium меняет только отображение на устройстве. Серверные функции требуют настоящую подписку.");
+
+        header("СИНХРОНИЗАЦИЯ");
+        value(EXPORT, "Экспортировать настройки", "JSON");
+        value(IMPORT, "Импортировать настройки", "JSON");
+        info("Облачная синхронизация пока не подключена. Баннер профиля не переносится. Экспорт не содержит токены и переписки.");
+
+        header("О FERRUM");
+        value(0, "Версия Ferrum", FerrumConfig.VERSION);
     }
 
-    private void addAccentSection(Context context) {
-        addHeader(context, "ОФОРМЛЕНИЕ");
-        addCard(context, "Акцентный цвет", "Выбери основной оттенок Ferrum.");
-        int[] colors = new int[] {
-            0xFF6E9BFF, 0xFF56C6A9, 0xFFB58AFF, 0xFFFF9B70, 0xFFE879A8, 0xFFE5B85C
-        };
-        LinearLayout row = new LinearLayout(context);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        for (int color : colors) {
-            Button chip = new Button(context);
-            chip.setText("●");
-            chip.setTextSize(18);
-            chip.setTextColor(color);
-            chip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Theme.getColor(Theme.key_windowBackgroundWhite)));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, AndroidUtilities.dp(48), 1f);
-            lp.setMargins(AndroidUtilities.dp(2), 0, AndroidUtilities.dp(2), 0);
-            row.addView(chip, lp);
-            chip.setOnClickListener(v -> {
-                FerrumConfig.setAccentColor(context, color);
-                FerrumConfig.applyAccentTheme(context);
-                Toast.makeText(context, "Акцентный цвет сохранён", Toast.LENGTH_SHORT).show();
-            });
+    private String percent(float value) { return Math.round(value * 100) + "%"; }
+    private String masked(String key) { return key == null || key.isEmpty() ? "Не задан" : "••••••••"; }
+    private String packName(int pack) {
+        if (pack < 0 || pack >= ModTheme.PACK_NAMES.length) pack = 0;
+        return LocaleController.getString(ModTheme.PACK_NAMES[pack]);
+    }
+    private String ringStyle(int style) {
+        String[] names = {"Сплошная", "Градиент", "Пунктир"};
+        return style >= 0 && style < names.length ? names[style] : names[0];
+    }
+
+    private void onRowClick(Row row) {
+        Context c = getParentActivity();
+        if (c == null) return;
+        switch (row.id) {
+            case NO_BLUR: case NO_TYPING: case NO_READ: case SAVE_DELETED: case CONFIRM_CALLS:
+            case LOCAL_PREMIUM: case HIDE_PREMIUM: case HIDE_STARS: {
+                String key = row.id == NO_BLUR ? ModConfig.KEY_NO_BLUR :
+                        row.id == NO_TYPING ? ModConfig.KEY_NO_TYPING :
+                        row.id == NO_READ ? ModConfig.KEY_NO_READ :
+                        row.id == SAVE_DELETED ? ModConfig.KEY_SAVE_DELETED :
+                        row.id == CONFIRM_CALLS ? ModConfig.KEY_CONFIRM_CALLS :
+                        row.id == LOCAL_PREMIUM ? ModConfig.KEY_LOCAL_PREMIUM :
+                        row.id == HIDE_PREMIUM ? ModConfig.KEY_HIDE_PREMIUM : ModConfig.KEY_HIDE_STARS;
+                boolean enabled = ModConfig.toggle(key);
+                if (row.id == NO_BLUR || row.id == LOCAL_PREMIUM) showRestartDialog();
+                refresh();
+                break;
+            }
+            case 40:
+                FerrumConfig.setAntivirusEnabled(c, !FerrumConfig.isAntivirusEnabled(c)); refresh(); break;
+            case ACCENT: showAccentDialog(); break;
+            case COLOR_PACK: showColorPackDialog(); break;
+            case BANNER_PICK: openDocument("image/*", REQUEST_BANNER, false); break;
+            case BANNER_REMOVE: FerrumConfig.clearProfileBanner(c); refresh(); break;
+            case BANNER_SCALE: case BANNER_X: case BANNER_Y: showNumberDialog(row.id); break;
+            case AVATAR_RING: FerrumConfig.setAvatarRingEnabled(c, !FerrumConfig.isAvatarRingEnabled(c)); refresh(); break;
+            case AVATAR_WIDTH: showAvatarWidthDialog(); break;
+            case AVATAR_COLOR: showAvatarColorDialog(); break;
+            case AVATAR_STYLE: showAvatarStyleDialog(); break;
+            case AV_ENGINE: showEngineDialog(); break;
+            case AI_PROVIDER: showProviderDialog(); break;
+            case AI_KEY: showSecretDialog(true); break;
+            case VT_KEY: showSecretDialog(false); break;
+            case SCAN: openDocument("*/*", REQUEST_SCAN, false); break;
+            case EXPORT: openDocument("application/json", REQUEST_EXPORT, true); break;
+            case IMPORT: openDocument("application/json", REQUEST_IMPORT, false); break;
         }
-        content.addView(row, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(52)));
     }
 
-    private void addBannerSection(Context context) {
-        addHeader(context, "БАННЕР ПРОФИЛЯ");
-        addCard(context, "Локальный баннер", "Изображение выбирается из галереи и отображается в шапке твоего профиля на этом устройстве.");
-        bannerStatus = addValue(context, bannerName());
-        addButton(context, "Выбрать изображение", v -> {
-            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("image/*");
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-            startActivityForResult(intent, REQUEST_BANNER);
-        });
-        addButton(context, "Удалить баннер", v -> {
-            FerrumConfig.clearProfileBanner(context);
-            bannerStatus.setText("Баннер не выбран");
-        });
-        addSeekBar(context, "Масштаб баннера", 50, 300, (int) (FerrumConfig.getBannerScale(context) * 100), value ->
-            FerrumConfig.setBannerScale(context, value / 100f));
-        addSeekBar(context, "Положение по горизонтали", -100, 100, (int) (FerrumConfig.getBannerOffsetX(context) * 100), value ->
-            FerrumConfig.setBannerOffsetX(context, value / 100f));
-        addSeekBar(context, "Положение по вертикали", -100, 100, (int) (FerrumConfig.getBannerOffsetY(context) * 100), value ->
-            FerrumConfig.setBannerOffsetY(context, value / 100f));
+    private void refresh() { if (getParentActivity() != null) { rebuildRows(getParentActivity()); if (adapter != null) adapter.notifyDataSetChanged(); } }
+    private void showRestartDialog() {
+        AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
+        b.setTitle("Нужен перезапуск");
+        b.setMessage("Перезапустить Ferrum, чтобы применить изменение?");
+        b.setPositiveButton("Перезапустить", (d, w) -> ModUtils.restartApp());
+        b.setNegativeButton("Позже", null);
+        showDialog(b.create());
+    }
+    private void showAccentDialog() {
+        final int[] colors = {0xFF6E9BFF,0xFF56C6A9,0xFFB58AFF,0xFFFF9B70,0xFFE879A8,0xFFE5B85C};
+        String[] names = {"Синий","Мятный","Сиреневый","Персиковый","Розовый","Золотой"};
+        AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
+        b.setTitle("Акцентный цвет");
+        b.setItems(names, (d, which) -> { FerrumConfig.setAccentColor(getParentActivity(), colors[which]); FerrumConfig.applyAccentTheme(getParentActivity()); refresh(); });
+        showDialog(b.create());
+    }
+    private void showColorPackDialog() {
+        CharSequence[] names = new CharSequence[ModTheme.PACK_NAMES.length];
+        for (int i=0;i<names.length;i++) names[i]=packName(i);
+        AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
+        b.setTitle("Цветовая палитра");
+        b.setItems(names, (d, which) -> { ModConfig.setColorPack(which); ModTheme.applyLive(); refresh(); });
+        b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        showDialog(b.create());
+    }
+    private void showNumberDialog(int id) {
+        Context c=getParentActivity();
+        EditText input=new EditText(c); input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
+        int current=id==BANNER_SCALE ? Math.round(FerrumConfig.getBannerScale(c)*100) : Math.round((id==BANNER_X?FerrumConfig.getBannerOffsetX(c):FerrumConfig.getBannerOffsetY(c))*100);
+        input.setText(String.valueOf(current));
+        AlertDialog.Builder b=new AlertDialog.Builder(c); b.setTitle(id==BANNER_SCALE?"Масштаб баннера (%)":"Смещение баннера (%)"); b.setView(input);
+        b.setPositiveButton(LocaleController.getString(R.string.OK), (d,w)->{ try { int v=Integer.parseInt(input.getText().toString()); if(id==BANNER_SCALE) FerrumConfig.setBannerScale(c,Math.max(50,Math.min(300,v))/100f); else if(id==BANNER_X) FerrumConfig.setBannerOffsetX(c,Math.max(-100,Math.min(100,v))/100f); else FerrumConfig.setBannerOffsetY(c,Math.max(-100,Math.min(100,v))/100f); refresh(); } catch(Exception ignored){} });
+        b.setNegativeButton(LocaleController.getString(R.string.Cancel),null); showDialog(b.create());
+    }
+    private void showAvatarWidthDialog() {
+        EditText input=new EditText(getParentActivity()); input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL); input.setText(String.valueOf(FerrumConfig.getAvatarRingWidth(getParentActivity())));
+        AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle("Толщина обводки"); b.setView(input);
+        b.setPositiveButton(LocaleController.getString(R.string.OK),(d,w)->{try{FerrumConfig.setAvatarRingWidth(getParentActivity(),Math.max(1f,Math.min(12f,Float.parseFloat(input.getText().toString()))));refresh();}catch(Exception ignored){}});
+        b.setNegativeButton(LocaleController.getString(R.string.Cancel),null); showDialog(b.create());
+    }
+    private void showAvatarColorDialog() {
+        int[] colors={0xFF6E9BFF,0xFF56C6A9,0xFFB58AFF,0xFFFF9B70,Color.WHITE};
+        String[] names={"Синий","Мятный","Сиреневый","Персиковый","Белый"};
+        AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle("Цвет обводки");
+        b.setItems(names,(d,w)->{FerrumConfig.setAvatarRingColor(getParentActivity(),colors[w]);refresh();}); showDialog(b.create());
+    }
+    private void showAvatarStyleDialog() {
+        String[] styles={"Сплошная","Градиент","Пунктир"}; AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle("Стиль обводки");
+        b.setItems(styles,(d,w)->{FerrumConfig.setAvatarRingStyle(getParentActivity(),w);refresh();}); showDialog(b.create());
+    }
+    private void showEngineDialog() {
+        String[] engines={"AI-анализ","VirusTotal"}; AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle("Движок анализа");
+        b.setItems(engines,(d,w)->{FerrumConfig.setAntivirusEngine(getParentActivity(),w==1?FerrumConfig.ANTIVIRUS_ENGINE_VIRUSTOTAL:FerrumConfig.ANTIVIRUS_ENGINE_AI);refresh();}); showDialog(b.create());
+    }
+    private void showProviderDialog() {
+        String[] providers={"Gemini","Claude","ChatGPT"}; AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle("AI-провайдер");
+        b.setItems(providers,(d,w)->{FerrumConfig.setAiProvider(getParentActivity(),providers[w]);refresh();}); showDialog(b.create());
+    }
+    private void showSecretDialog(boolean ai) {
+        Context c=getParentActivity(); EditText input=new EditText(c); input.setSingleLine(true); input.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        input.setHint("API-ключ"); input.setText(ai?FerrumConfig.getAiApiKey(c):FerrumConfig.getVirusTotalApiKey(c));
+        AlertDialog.Builder b=new AlertDialog.Builder(c); b.setTitle(ai?"AI API-ключ":"API-ключ VirusTotal"); b.setView(input);
+        b.setPositiveButton(LocaleController.getString(R.string.OK),(d,w)->{try{if(ai)FerrumConfig.setAiApiKey(c,input.getText().toString());else FerrumConfig.setVirusTotalApiKey(c,input.getText().toString());Toast.makeText(c,"Ключ сохранён",Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(c,"Не удалось сохранить ключ",Toast.LENGTH_LONG).show();}refresh();});
+        b.setNegativeButton(LocaleController.getString(R.string.Cancel),null); showDialog(b.create());
+    }
+    private void openDocument(String mime,int request,boolean create) {
+        Intent i=new Intent(create?Intent.ACTION_CREATE_DOCUMENT:Intent.ACTION_OPEN_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType(mime);
+        if(create){i.putExtra(Intent.EXTRA_TITLE,"ferrum-settings.json");} else {i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);}
+        startActivityForResult(i,request);
     }
 
-    private void addAvatarSection(Context context) {
-        addHeader(context, "АВАТАР");
-        addCard(context, "Обводка аватара", "Обводка отображается вокруг аватара твоего профиля. Цвет, толщину и стиль можно менять ниже.");
-        android.widget.Switch enabled = new android.widget.Switch(context);
-        enabled.setText("Включить обводку");
-        enabled.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        enabled.setChecked(FerrumConfig.isAvatarRingEnabled(context));
-        enabled.setOnCheckedChangeListener((button, checked) -> FerrumConfig.setAvatarRingEnabled(context, checked));
-        content.addView(enabled, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(52)));
-        int[] colors = new int[] { 0xFF6E9BFF, 0xFF56C6A9, 0xFFB58AFF, 0xFFFF9B70, Color.WHITE };
-        addSeekBar(context, "Толщина обводки", 10, 120, (int) (FerrumConfig.getAvatarRingWidth(context) * 10), value ->
-            FerrumConfig.setAvatarRingWidth(context, value / 10f));
-        LinearLayout row = new LinearLayout(context);
-        for (int color : colors) {
-            Button chip = new Button(context);
-            chip.setText("●");
-            chip.setTextColor(color);
-            chip.setTextSize(18);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, AndroidUtilities.dp(48), 1f);
-            row.addView(chip, lp);
-            chip.setOnClickListener(v -> FerrumConfig.setAvatarRingColor(context, color));
+    private class ListAdapter extends RecyclerListView.SelectionAdapter {
+        private final Context context;
+        ListAdapter(Context c){context=c;}
+        @Override public int getItemCount(){return rows.size();}
+        @Override public int getItemViewType(int p){return rows.get(p).type;}
+        @Override public boolean isEnabled(RecyclerView.ViewHolder h){int p=h.getAdapterPosition();return p>=0&&p<rows.size()&&(rows.get(p).type==CHECK||rows.get(p).type==VALUE);}
+        @NonNull @Override public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent,int type){
+            View v=type==HEADER?new HeaderCell(context):type==CHECK?new TextCheckCell(context):type==VALUE?new TextSettingsCell(context):new TextInfoPrivacyCell(context);
+            v.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT,RecyclerView.LayoutParams.WRAP_CONTENT));
+            return new RecyclerListView.Holder(v);
         }
-        content.addView(row, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(50)));
-        String[] styles = new String[] { "Сплошная", "Градиент", "Пунктир" };
-        for (int i = 0; i < styles.length; i++) {
-            final int style = i;
-            addButton(context, styles[i], v -> FerrumConfig.setAvatarRingStyle(context, style));
+        @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h,int p){
+            Row r=rows.get(p); boolean divider=p+1<rows.size()&&(rows.get(p+1).type==CHECK||rows.get(p+1).type==VALUE);
+            if(r.type==HEADER)((HeaderCell)h.itemView).setText(r.title);
+            else if(r.type==CHECK)((TextCheckCell)h.itemView).setTextAndCheck(r.title,r.checked,divider);
+            else if(r.type==VALUE)((TextSettingsCell)h.itemView).setTextAndValue(r.title,r.value==null?"":r.value,divider);
+            else ((TextInfoPrivacyCell)h.itemView).setText(r.title);
         }
-    }
-
-    private void addSecuritySection(Context context) {
-        addHeader(context, "БЕЗОПАСНОСТЬ");
-        addCard(context, "Проверка файлов", "Выбери движок анализа. Ключи хранятся локально в зашифрованном виде с использованием Android Keystore.");
-
-        android.widget.Switch enabled = new android.widget.Switch(context);
-        enabled.setText("Показывать пункт проверки файлов");
-        enabled.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        enabled.setChecked(FerrumConfig.isAntivirusEnabled(context));
-        enabled.setOnCheckedChangeListener((button, checked) -> FerrumConfig.setAntivirusEnabled(context, checked));
-        content.addView(enabled, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(52)));
-
-        RadioGroup engineGroup = new RadioGroup(context);
-        engineGroup.setOrientation(RadioGroup.VERTICAL);
-        RadioButton aiMode = new RadioButton(context);
-        aiMode.setText("AI-анализ");
-        aiMode.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        aiMode.setId(View.generateViewId());
-        RadioButton vtMode = new RadioButton(context);
-        vtMode.setText("VirusTotal");
-        vtMode.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        vtMode.setId(View.generateViewId());
-        engineGroup.addView(aiMode);
-        engineGroup.addView(vtMode);
-        content.addView(engineGroup, new LinearLayout.LayoutParams(-1, -2));
-
-        LinearLayout aiPanel = new LinearLayout(context);
-        aiPanel.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout vtPanel = new LinearLayout(context);
-        vtPanel.setOrientation(LinearLayout.VERTICAL);
-
-        TextView providerLabel = new TextView(context);
-        providerLabel.setText("AI-провайдер");
-        providerLabel.setTextSize(13);
-        providerLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-        aiPanel.addView(providerLabel);
-
-        RadioGroup providerGroup = new RadioGroup(context);
-        providerGroup.setOrientation(RadioGroup.VERTICAL);
-        String[] providers = new String[] { "Gemini", "Claude", "ChatGPT" };
-        for (String provider : providers) {
-            RadioButton option = new RadioButton(context);
-            option.setText(provider);
-            option.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-            option.setTag(provider);
-            option.setId(View.generateViewId());
-            providerGroup.addView(option);
-            if (provider.equals(FerrumConfig.getAiProvider(context))) providerGroup.check(option.getId());
-        }
-        aiPanel.addView(providerGroup);
-
-        EditText aiKey = new EditText(context);
-        aiKey.setSingleLine(true);
-        aiKey.setTextSize(14);
-        aiKey.setHint("API-ключ выбранного AI-провайдера");
-        aiKey.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        aiKey.setText(FerrumConfig.getAiApiKey(context));
-        aiPanel.addView(aiKey, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(52)));
-
-        Button saveAi = new Button(context);
-        saveAi.setText("Сохранить AI API-ключ");
-        saveAi.setAllCaps(false);
-        saveAi.setOnClickListener(v -> {
-            int checkedId = providerGroup.getCheckedRadioButtonId();
-            View checked = providerGroup.findViewById(checkedId);
-            if (checked instanceof RadioButton) {
-                FerrumConfig.setAiProvider(context, String.valueOf(checked.getTag()));
-            }
-            try {
-                FerrumConfig.setAiApiKey(context, aiKey.getText().toString());
-                Toast.makeText(context, "AI-настройки сохранены", Toast.LENGTH_SHORT).show();
-            } catch (Exception e) {
-                Toast.makeText(context, "Не удалось безопасно сохранить ключ", Toast.LENGTH_LONG).show();
-            }
-        });
-        aiPanel.addView(saveAi, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(48)));
-
-        TextView vtLabel = new TextView(context);
-        vtLabel.setText("API-ключ VirusTotal");
-        vtLabel.setTextSize(13);
-        vtLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-        vtPanel.addView(vtLabel);
-
-        EditText vtKey = new EditText(context);
-        vtKey.setSingleLine(true);
-        vtKey.setTextSize(14);
-        vtKey.setHint("Вставь API-ключ VirusTotal");
-        vtKey.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        vtKey.setText(FerrumConfig.getVirusTotalApiKey(context));
-        vtPanel.addView(vtKey, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(52)));
-
-        Button saveVt = new Button(context);
-        saveVt.setText("Сохранить VirusTotal API-ключ");
-        saveVt.setAllCaps(false);
-        saveVt.setOnClickListener(v -> {
-            try {
-                FerrumConfig.setVirusTotalApiKey(context, vtKey.getText().toString());
-                Toast.makeText(context, "Ключ VirusTotal сохранён", Toast.LENGTH_SHORT).show();
-            } catch (Exception e) {
-                Toast.makeText(context, "Не удалось безопасно сохранить ключ", Toast.LENGTH_LONG).show();
-            }
-        });
-        vtPanel.addView(saveVt, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(48)));
-
-        TextView notice = new TextView(context);
-        notice.setText("Важно: этот экран пока сохраняет выбор движка и ключи. Сетевые запросы к AI и VirusTotal и проверка файлов через эти сервисы ещё не подключены.");
-        notice.setTextSize(12);
-        notice.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-        notice.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(8), AndroidUtilities.dp(4), AndroidUtilities.dp(8));
-
-        content.addView(aiPanel, new LinearLayout.LayoutParams(-1, -2));
-        content.addView(vtPanel, new LinearLayout.LayoutParams(-1, -2));
-        content.addView(notice, new LinearLayout.LayoutParams(-1, -2));
-
-        int engine = FerrumConfig.getAntivirusEngine(context);
-        engineGroup.check(engine == FerrumConfig.ANTIVIRUS_ENGINE_VIRUSTOTAL ? vtMode.getId() : aiMode.getId());
-        aiPanel.setVisibility(engine == FerrumConfig.ANTIVIRUS_ENGINE_AI ? View.VISIBLE : View.GONE);
-        vtPanel.setVisibility(engine == FerrumConfig.ANTIVIRUS_ENGINE_VIRUSTOTAL ? View.VISIBLE : View.GONE);
-        engineGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            boolean useVt = checkedId == vtMode.getId();
-            FerrumConfig.setAntivirusEngine(context, useVt
-                    ? FerrumConfig.ANTIVIRUS_ENGINE_VIRUSTOTAL
-                    : FerrumConfig.ANTIVIRUS_ENGINE_AI);
-            aiPanel.setVisibility(useVt ? View.GONE : View.VISIBLE);
-            vtPanel.setVisibility(useVt ? View.VISIBLE : View.GONE);
-        });
-        providerGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            View checked = providerGroup.findViewById(checkedId);
-            if (checked instanceof RadioButton) {
-                FerrumConfig.setAiProvider(context, String.valueOf(checked.getTag()));
-                aiKey.setText(FerrumConfig.getAiApiKey(context));
-            }
-        });
-    }
-
-    private void addLegacySection(Context context) {
-        addHeader(context, "ПРИВАТНОСТЬ И СООБЩЕНИЯ");
-        addCard(context, "Дополнительная приватность", "Управление статусом набора текста и отметками о прочтении.");
-        addModSwitch(context, "Не отправлять статус «печатает…»", ModConfig.KEY_NO_TYPING, false);
-        addModSwitch(context, "Читать без отметки о прочтении", ModConfig.KEY_NO_READ, false);
-        addModSwitch(context, "Сохранять удалённые сообщения", ModConfig.KEY_SAVE_DELETED, false);
-        addHeader(context, "ЗВОНКИ И TELEGRAM");
-        addModSwitch(context, "Подтверждать исходящие звонки", ModConfig.KEY_CONFIRM_CALLS, false);
-        addModSwitch(context, "Локальный Telegram Premium", ModConfig.KEY_LOCAL_PREMIUM, true);
-        addModSwitch(context, "Скрыть Telegram Premium", ModConfig.KEY_HIDE_PREMIUM, false);
-        addModSwitch(context, "Скрыть Telegram Stars", ModConfig.KEY_HIDE_STARS, false);
-        addValue(context, "Локальный Premium меняет только отображение на устройстве. Серверные функции требуют настоящую подписку.");
-        addHeader(context, "ДОПОЛНИТЕЛЬНОЕ ОФОРМЛЕНИЕ");
-        addModSwitch(context, "Отключить размытие и Liquid Glass", ModConfig.KEY_NO_BLUR, true);
-        TextView blurLabel = addValue(context, "Предпросмотр размытия");
-        legacyBlurPreview = new ModBlurPreviewView(context);
-        legacyBlurPreview.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-        legacyBlurPreview.setBlurDisabled(ModConfig.isNoBlur());
-        content.addView(legacyBlurPreview, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(136)));
-        addButton(context, "Выбрать цветовую палитру", v -> showModColorPackDialog(context));
-        TextView colorLabel = addValue(context, "Предпросмотр цветовой палитры");
-        legacyColorPreview = new ModColorPreviewView(context);
-        legacyColorPreview.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-        legacyColorPreview.setPack(ModConfig.getColorPack());
-        content.addView(legacyColorPreview, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(220)));
-        addValue(context, "Палитры меняют основные цвета интерфейса Telegram. Для отключения размытия может потребоваться перезапуск.");
-    }
-
-    private void addModSwitch(Context context, String title, String key, boolean restartRequired) {
-        android.widget.Switch toggle = new android.widget.Switch(context);
-        toggle.setText(title);
-        toggle.setTextSize(14);
-        toggle.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        toggle.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(5), AndroidUtilities.dp(4), AndroidUtilities.dp(5));
-        toggle.setMinHeight(AndroidUtilities.dp(52));
-        toggle.setChecked(ModConfig.get(key));
-        toggle.setOnCheckedChangeListener((button, checked) -> {
-            ModConfig.toggle(key);
-            if (ModConfig.KEY_NO_BLUR.equals(key) && legacyBlurPreview != null) {
-                legacyBlurPreview.setBlurDisabled(checked);
-            }
-            if (restartRequired) {
-                new android.app.AlertDialog.Builder(context)
-                        .setTitle("Нужен перезапуск")
-                        .setMessage("Перезапустить Ferrum, чтобы применить изменение?")
-                        .setPositiveButton("Перезапустить", (dialog, which) -> ModUtils.restartApp())
-                        .setNegativeButton("Позже", null)
-                        .show();
-            }
-        });
-        content.addView(toggle, new LinearLayout.LayoutParams(-1, -2));
-    }
-
-    private void showModColorPackDialog(Context context) {
-        String[] packs = new String[] {"Стандартная", "Голубая", "Розовая", "Мятная", "Сиреневая", "Персиковая", "Графитовая"};
-        new android.app.AlertDialog.Builder(context)
-                .setTitle("Цветовая палитра")
-                .setSingleChoiceItems(packs, ModConfig.getColorPack(), (dialog, which) -> {
-                    ModConfig.setColorPack(which);
-                    ModTheme.applyLive();
-                    if (legacyColorPreview != null) legacyColorPreview.setPack(which);
-                    dialog.dismiss();
-                    Toast.makeText(context, "Палитра применена", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("Отмена", null)
-                .show();
-    }
-
-    private void addSyncSection(Context context) {
-        addHeader(context, "СИНХРОНИЗАЦИЯ");
-        addCard(context, "Настройки между устройствами", "Автоматическая облачная синхронизация пока не подключена. Можно перенести совместимые настройки вручную через файл. Изображение баннера остаётся на исходном устройстве.");
-        addButton(context, "Экспортировать настройки", v -> {
-            Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("application/json");
-            intent.putExtra(Intent.EXTRA_TITLE, "ferrum-settings.json");
-            startActivityForResult(intent, REQUEST_EXPORT);
-        });
-        addButton(context, "Импортировать настройки", v -> {
-            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("application/json");
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            startActivityForResult(intent, REQUEST_IMPORT);
-        });
-        addValue(context, "Экспорт не содержит токены, переписки или данные Telegram-аккаунта.");
-    }
-    private void addHeader(Context context, String title) {
-        TextView view = new TextView(context);
-        view.setText(title);
-        view.setTextSize(11);
-        view.setLetterSpacing(0.08f);
-        view.setTypeface(AndroidUtilities.bold());
-        view.setTextColor(FerrumConfig.getAccentColor(context));
-        view.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(18), AndroidUtilities.dp(4), AndroidUtilities.dp(8));
-        content.addView(view, new LinearLayout.LayoutParams(-1, -2));
-    }
-
-    private void addCard(Context context, String title, String description) {
-        LinearLayout card = new LinearLayout(context);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(AndroidUtilities.dp(14), AndroidUtilities.dp(12), AndroidUtilities.dp(14), AndroidUtilities.dp(12));
-        card.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(16), Theme.getColor(Theme.key_windowBackgroundWhite)));
-        TextView heading = new TextView(context);
-        heading.setText(title);
-        heading.setTextSize(15);
-        heading.setTypeface(AndroidUtilities.bold());
-        heading.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        card.addView(heading);
-        TextView body = new TextView(context);
-        body.setText(description);
-        body.setTextSize(13);
-        body.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-        LinearLayout.LayoutParams bodyLp = new LinearLayout.LayoutParams(-1, -2);
-        bodyLp.topMargin = AndroidUtilities.dp(5);
-        card.addView(body, bodyLp);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-        lp.bottomMargin = AndroidUtilities.dp(10);
-        content.addView(card, lp);
-    }
-
-    private TextView addValue(Context context, String value) {
-        TextView view = new TextView(context);
-        view.setText(value);
-        view.setTextSize(13);
-        view.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-        view.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(5), AndroidUtilities.dp(4), AndroidUtilities.dp(8));
-        content.addView(view, new LinearLayout.LayoutParams(-1, -2));
-        return view;
-    }
-
-    private void addButton(Context context, String title, View.OnClickListener listener) {
-        Button button = new Button(context);
-        button.setText(title);
-        button.setAllCaps(false);
-        button.setTextColor(FerrumConfig.getAccentColor(context));
-        button.setOnClickListener(listener);
-        content.addView(button, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(48)));
-    }
-
-    private interface ValueListener { void onChanged(int value); }
-
-    private void addSeekBar(Context context, String title, int min, int max, int value, ValueListener listener) {
-        TextView label = new TextView(context);
-        label.setText(title);
-        label.setTextSize(13);
-        label.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        label.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(10), 0, 0);
-        content.addView(label, new LinearLayout.LayoutParams(-1, -2));
-        SeekBar seek = new SeekBar(context);
-        seek.setMax(max - min);
-        seek.setProgress(value - min);
-        seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
-                if (fromUser) listener.onChanged(progress + min);
-            }
-            @Override public void onStartTrackingTouch(SeekBar bar) { }
-            @Override public void onStopTrackingTouch(SeekBar bar) { }
-        });
-        content.addView(seek, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(42)));
-    }
-
-    private String bannerName() {
-        String uri = FerrumConfig.getProfileBannerUri(getContext());
-        return uri == null ? "Баннер не выбран" : "Выбрано изображение: " + Uri.parse(uri).getLastPathSegment();
     }
 
     @Override
-    public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
-        if (resultCode == Activity.RESULT_OK && data != null && data.getData() != null
-                && (requestCode == REQUEST_EXPORT || requestCode == REQUEST_IMPORT)) {
-            Uri uri = data.getData();
-            try {
-                if (requestCode == REQUEST_EXPORT) {
-                    String json = FerrumConfig.exportPortableSettings(getParentActivity());
-                    try (java.io.OutputStream output = getParentActivity().getContentResolver().openOutputStream(uri)) {
-                        if (output == null) throw new IllegalStateException("Не удалось открыть файл для записи");
-                        output.write(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                    }
-                    Toast.makeText(getParentActivity(), "Настройки Ferrum экспортированы", Toast.LENGTH_LONG).show();
-                } else {
-                    StringBuilder json = new StringBuilder();
-                    try (java.io.InputStream input = getParentActivity().getContentResolver().openInputStream(uri)) {
-                        if (input == null) throw new IllegalStateException("Не удалось открыть файл");
-                        byte[] buffer = new byte[4096];
-                        int count;
-                        while ((count = input.read(buffer)) != -1) {
-                            if (json.length() + count > 128 * 1024) throw new IllegalArgumentException("Файл настроек слишком большой");
-                            json.append(new String(buffer, 0, count, java.nio.charset.StandardCharsets.UTF_8));
-                        }
-                    }
-                    FerrumConfig.importPortableSettings(getParentActivity(), json.toString());
-                    FerrumConfig.applyAccentTheme(getParentActivity());
-                    Toast.makeText(getParentActivity(), "Настройки импортированы. Перезапусти экран профиля для обновления баннера и обводки.", Toast.LENGTH_LONG).show();
-                }
-            } catch (Exception e) {
-                Toast.makeText(getParentActivity(), "Ошибка переноса настроек: " + e.getMessage(), Toast.LENGTH_LONG).show();
+    public void onActivityResultFragment(int requestCode,int resultCode,Intent data) {
+        if(resultCode!=Activity.RESULT_OK||data==null||data.getData()==null)return;
+        Uri uri=data.getData(); Context c=getParentActivity();
+        try {
+            if(requestCode==REQUEST_EXPORT){
+                String json=FerrumConfig.exportPortableSettings(c);
+                try(OutputStream out=c.getContentResolver().openOutputStream(uri)){if(out==null)throw new IllegalStateException("Не удалось открыть файл");out.write(json.getBytes(StandardCharsets.UTF_8));}
+                Toast.makeText(c,"Настройки Ferrum экспортированы",Toast.LENGTH_LONG).show();
+            } else if(requestCode==REQUEST_IMPORT){
+                StringBuilder json=new StringBuilder();
+                try(InputStream in=c.getContentResolver().openInputStream(uri)){if(in==null)throw new IllegalStateException("Не удалось открыть файл");byte[] buf=new byte[4096];int n;while((n=in.read(buf))!=-1){if(json.length()+n>128*1024)throw new IllegalArgumentException("Файл слишком большой");json.append(new String(buf,0,n,StandardCharsets.UTF_8));}}
+                FerrumConfig.importPortableSettings(c,json.toString()); FerrumConfig.applyAccentTheme(c);
+                Toast.makeText(c,"Настройки импортированы",Toast.LENGTH_LONG).show(); refresh();
+            } else if(requestCode==REQUEST_BANNER){
+                c.getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION); FerrumConfig.setProfileBannerUri(c,uri.toString()); refresh();
+            } else if(requestCode==REQUEST_SCAN){
+                FerrumAntivirus.scan(c,uri,result->{StringBuilder msg=new StringBuilder();msg.append("Файл: ").append(result.fileName).append("\nРазмер: ").append(result.size).append(" байт\nSHA-256: ").append(result.sha256).append("\nУровень риска: ").append(result.riskLabel());for(String finding:result.findings)msg.append("\n• ").append(finding);new AlertDialog.Builder(getParentActivity()).setTitle("Результат проверки").setMessage(msg.toString()).setPositiveButton("Закрыть",null).show();});
             }
-            return;
-        }
-        if (requestCode == REQUEST_SCAN && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
-            FerrumAntivirus.scan(getParentActivity(), data.getData(), result -> {
-                StringBuilder message = new StringBuilder();
-                message.append("Файл: ").append(result.fileName).append("\\n");
-                message.append("Размер: ").append(result.size).append(" байт\\n");
-                message.append("SHA-256: ").append(result.sha256).append("\\n");
-                message.append("Уровень риска: ").append(result.riskLabel()).append("\\n\\n");
-                for (String finding : result.findings) message.append("• ").append(finding).append("\\n");
-                new android.app.AlertDialog.Builder(getParentActivity())
-                        .setTitle("Результат проверки")
-                        .setMessage(message.toString())
-                        .setPositiveButton("Закрыть", null)
-                        .show();
-            });
-            return;
-        }
-        if (requestCode == REQUEST_BANNER && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
-            Uri uri = data.getData();
-            try {
-                getParentActivity().getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                FerrumConfig.setProfileBannerUri(getParentActivity(), uri.toString());
-                if (bannerStatus != null) bannerStatus.setText(bannerName());
-            } catch (Exception e) {
-                Toast.makeText(getParentActivity(), "Не удалось сохранить доступ к изображению", Toast.LENGTH_LONG).show();
-            }
-        }
+        } catch(Exception e){Toast.makeText(c,"Ошибка: "+e.getMessage(),Toast.LENGTH_LONG).show();}
     }
+
+    @Override protected RecyclerListView getListViewForSimpleGlass(){return listView;}
+    @Override public boolean isSupportEdgeToEdge(){return true;}
 }
