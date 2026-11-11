@@ -805,7 +805,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         items.add(SettingCell.Factory.of(8, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.settings_devices, getString(R.string.SettingsDevices), getString(R.string.SettingsDevicesInfo)));
         items.add(SettingCell.Factory.of(9, IconBackgroundColors.ORANGE_DEEP.top, IconBackgroundColors.ORANGE_DEEP.bottom, R.drawable.settings_power, getString(R.string.SettingsPowerSaving), getString(R.string.SettingsPowerSavingInfo)));
         items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_language, getString(R.string.SettingsLanguage), LocaleController.getCurrentLanguageName()));
-        items.add(SettingCell.Factory.of(28, 0xFF6E9BFF, 0xFF56C6A9, R.drawable.settings_account, "Ferrum", "Настройки и дополнительные возможности"));
+        items.add(SettingCell.Factory.of(29, 0xFF6E9BFF, 0xFF56C6A9, R.drawable.settings_account, "Ferrum", "Настройки и дополнительные возможности"));
 
         items.add(UItem.asShadow(null));
         if (!walletAbove && getMessagesController().config.walletAvailable.get()) {
@@ -1005,7 +1005,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 presentFragment(new HeaderSettingsActivity());
                 break;
             }
-            case 28: {
+            case 29: {
                 presentSettingFragment(new FerrumSettingsActivity());
                 break;
             }
