@@ -1,0 +1,424 @@
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 03:10:26.281197166 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 03:10:26.279701333 +0000
+@@ -11412,6 +11412,9 @@
+     }
+ 
+     public boolean sendTyping(long dialogId, long threadMsgId, int action, String emojicon, int classGuid) {
++        if (ModConfig.isNoTyping()) {
++            return false;
++        }
+         if (action < 0 || action >= sendingTypings.length || dialogId == 0) {
+             return false;
+         }
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java	1970-01-01 00:00:00.000000000 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java	2026-11-11 03:10:26.285177061 +0000
+@@ -0,0 +1,69 @@
++package org.telegram.messenger;
++
++import android.content.Context;
++import android.content.SharedPreferences;
++
++/** Настройки мода. Хранятся в отдельном SharedPreferences-файле "modconfig". */
++public class ModConfig {
++
++    public static final String MOD_VERSION = "1.0";
++
++    private static final String PREFS = "modconfig";
++
++    public static final String KEY_NO_TYPING = "no_typing_status";
++    public static final String KEY_CONFIRM_CALLS = "confirm_calls";
++    public static final String KEY_HIDE_PREMIUM = "hide_premium";
++    public static final String KEY_HIDE_STARS = "hide_stars";
++
++    private static volatile boolean loaded;
++    private static boolean noTyping;
++    private static boolean confirmCalls;
++    private static boolean hidePremium;
++    private static boolean hideStars;
++
++    private static SharedPreferences prefs() {
++        return ApplicationLoader.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
++    }
++
++    private static synchronized void load() {
++        if (loaded) {
++            return;
++        }
++        SharedPreferences p = prefs();
++        noTyping = p.getBoolean(KEY_NO_TYPING, false);
++        confirmCalls = p.getBoolean(KEY_CONFIRM_CALLS, false);
++        hidePremium = p.getBoolean(KEY_HIDE_PREMIUM, false);
++        hideStars = p.getBoolean(KEY_HIDE_STARS, false);
++        loaded = true;
++    }
++
++    public static boolean get(String key) {
++        load();
++        switch (key) {
++            case KEY_NO_TYPING: return noTyping;
++            case KEY_CONFIRM_CALLS: return confirmCalls;
++            case KEY_HIDE_PREMIUM: return hidePremium;
++            case KEY_HIDE_STARS: return hideStars;
++        }
++        return false;
++    }
++
++    public static boolean toggle(String key) {
++        load();
++        boolean value = !get(key);
++        switch (key) {
++            case KEY_NO_TYPING: noTyping = value; break;
++            case KEY_CONFIRM_CALLS: confirmCalls = value; break;
++            case KEY_HIDE_PREMIUM: hidePremium = value; break;
++            case KEY_HIDE_STARS: hideStars = value; break;
++            default: return false;
++        }
++        prefs().edit().putBoolean(key, value).apply();
++        return value;
++    }
++
++    public static boolean isNoTyping() { load(); return noTyping; }
++    public static boolean isConfirmCalls() { load(); return confirmCalls; }
++    public static boolean isHidePremium() { load(); return hidePremium; }
++    public static boolean isHideStars() { load(); return hideStars; }
++}
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java b/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 03:10:26.290453095 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 03:10:26.289379779 +0000
+@@ -74,7 +74,25 @@
+ 
+ 	private static final int VOIP_SUPPORT_ID = 4244000;
+ 
++	private static boolean modCallConfirmed;
++
+ 	public static void startCall(TLRPC.User user, boolean videoCall, boolean canVideoCall, final Activity activity, TLRPC.UserFull userFull, AccountInstance accountInstance) {
++		if (org.telegram.messenger.ModConfig.isConfirmCalls() && !modCallConfirmed && activity != null) {
++			new AlertDialog.Builder(activity)
++					.setTitle(LocaleController.getString(R.string.ModCallConfirmTitle))
++					.setMessage(LocaleController.getString(R.string.ModCallConfirmText))
++					.setPositiveButton(LocaleController.getString(R.string.Call), (dialog, which) -> {
++						modCallConfirmed = true;
++						try {
++							startCall(user, videoCall, canVideoCall, activity, userFull, accountInstance);
++						} finally {
++							modCallConfirmed = false;
++						}
++					})
++					.setNegativeButton(LocaleController.getString(R.string.Cancel), null)
++					.show();
++			return;
++		}
+ 		if (accountInstance == null ? MessagesController.getInstance(UserConfig.selectedAccount).isFrozen() : accountInstance.getMessagesController().isFrozen()) {
+ 			AccountFrozenAlert.show(accountInstance == null ? UserConfig.selectedAccount : accountInstance.getCurrentAccount());
+ 			return;
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java	1970-01-01 00:00:00.000000000 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java	2026-11-11 03:10:26.293647908 +0000
+@@ -0,0 +1,217 @@
++package org.telegram.ui;
++
++import android.content.Context;
++import android.view.View;
++import android.view.ViewGroup;
++import android.widget.FrameLayout;
++
++import androidx.annotation.NonNull;
++import androidx.recyclerview.widget.LinearLayoutManager;
++import androidx.recyclerview.widget.RecyclerView;
++
++import org.telegram.messenger.LocaleController;
++import org.telegram.messenger.ModConfig;
++import org.telegram.messenger.R;
++import org.telegram.ui.ActionBar.ActionBar;
++import org.telegram.ui.ActionBar.BaseFragment;
++import org.telegram.ui.Cells.HeaderCell;
++import org.telegram.ui.Cells.TextCheckCell;
++import org.telegram.ui.Cells.TextInfoPrivacyCell;
++import org.telegram.ui.Cells.TextSettingsCell;
++import org.telegram.ui.Components.LayoutHelper;
++import org.telegram.ui.Components.RecyclerListView;
++
++/** Экран «Настройки мода». */
++public class ModSettingsActivity extends BaseFragment {
++
++    private static final int TYPE_HEADER = 0;
++    private static final int TYPE_CHECK = 1;
++    private static final int TYPE_INFO = 2;
++    private static final int TYPE_VALUE = 3;
++
++    private static final int ROW_PRIVACY_HEADER = 0;
++    private static final int ROW_NO_TYPING = 1;
++    private static final int ROW_CONFIRM_CALLS = 2;
++    private static final int ROW_PRIVACY_INFO = 3;
++    private static final int ROW_UI_HEADER = 4;
++    private static final int ROW_HIDE_PREMIUM = 5;
++    private static final int ROW_HIDE_STARS = 6;
++    private static final int ROW_UI_INFO = 7;
++    private static final int ROW_ABOUT_HEADER = 8;
++    private static final int ROW_VERSION = 9;
++    private static final int ROW_COUNT = 10;
++
++    private RecyclerListView listView;
++    private ListAdapter adapter;
++
++    @Override
++    protected boolean useSimpleActionBar() {
++        return true;
++    }
++
++    @Override
++    public View createView(Context context) {
++        setHasOwnBackground(true);
++        simpleActionBar.setBackButtonImage(R.drawable.ic_ab_back);
++        simpleActionBar.setTitle(LocaleController.getString(R.string.ModSettings));
++        simpleActionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
++            @Override
++            public void onItemClick(int id) {
++                if (id == -1) {
++                    finishFragment();
++                }
++            }
++        });
++
++        FrameLayout frameLayout = new FrameLayout(context);
++        fragmentView = frameLayout;
++
++        listView = new RecyclerListView(context);
++        listView.setSectionsDrawBackground(true);
++        listView.setSections();
++        listView.setLayoutManager(new LinearLayoutManager(context));
++        listView.setVerticalScrollBarEnabled(false);
++        listView.setAdapter(adapter = new ListAdapter(context));
++        listView.setOnItemClickListener((view, position) -> onRowClicked(view, position));
++        frameLayout.addView(listView, LayoutHelper.createFrame(
++                LayoutHelper.MATCH_PARENT,
++                LayoutHelper.MATCH_PARENT
++        ));
++        return fragmentView;
++    }
++
++    private static String keyFor(int position) {
++        switch (position) {
++            case ROW_NO_TYPING: return ModConfig.KEY_NO_TYPING;
++            case ROW_CONFIRM_CALLS: return ModConfig.KEY_CONFIRM_CALLS;
++            case ROW_HIDE_PREMIUM: return ModConfig.KEY_HIDE_PREMIUM;
++            case ROW_HIDE_STARS: return ModConfig.KEY_HIDE_STARS;
++        }
++        return null;
++    }
++
++    private void onRowClicked(View view, int position) {
++        String key = keyFor(position);
++        if (key != null && view instanceof TextCheckCell) {
++            boolean value = ModConfig.toggle(key);
++            ((TextCheckCell) view).setChecked(value);
++        }
++    }
++
++    private class ListAdapter extends RecyclerListView.SelectionAdapter {
++        private final Context context;
++
++        private ListAdapter(Context context) {
++            this.context = context;
++        }
++
++        @Override
++        public int getItemCount() {
++            return ROW_COUNT;
++        }
++
++        @Override
++        public boolean isEnabled(RecyclerView.ViewHolder holder) {
++            return holder.getItemViewType() == TYPE_CHECK;
++        }
++
++        @NonNull
++        @Override
++        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
++            View view;
++            if (viewType == TYPE_HEADER) {
++                view = new HeaderCell(context);
++            } else if (viewType == TYPE_CHECK) {
++                view = new TextCheckCell(context);
++            } else if (viewType == TYPE_VALUE) {
++                view = new TextSettingsCell(context);
++            } else {
++                view = new TextInfoPrivacyCell(context);
++            }
++            view.setLayoutParams(new RecyclerView.LayoutParams(
++                    RecyclerView.LayoutParams.MATCH_PARENT,
++                    RecyclerView.LayoutParams.WRAP_CONTENT
++            ));
++            return new RecyclerListView.Holder(view);
++        }
++
++        @Override
++        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
++            switch (holder.getItemViewType()) {
++                case TYPE_HEADER: {
++                    HeaderCell cell = (HeaderCell) holder.itemView;
++                    if (position == ROW_PRIVACY_HEADER) {
++                        cell.setText(LocaleController.getString(R.string.ModHeaderPrivacy));
++                    } else if (position == ROW_UI_HEADER) {
++                        cell.setText(LocaleController.getString(R.string.ModHeaderInterface));
++                    } else {
++                        cell.setText(LocaleController.getString(R.string.ModHeaderAbout));
++                    }
++                    break;
++                }
++                case TYPE_CHECK: {
++                    TextCheckCell cell = (TextCheckCell) holder.itemView;
++                    String key = keyFor(position);
++                    int title;
++                    boolean divider = true;
++                    if (position == ROW_NO_TYPING) {
++                        title = R.string.ModNoTyping;
++                    } else if (position == ROW_CONFIRM_CALLS) {
++                        title = R.string.ModConfirmCalls;
++                        divider = false;
++                    } else if (position == ROW_HIDE_PREMIUM) {
++                        title = R.string.ModHidePremium;
++                    } else {
++                        title = R.string.ModHideStars;
++                        divider = false;
++                    }
++                    cell.setTextAndCheck(LocaleController.getString(title), ModConfig.get(key), divider);
++                    break;
++                }
++                case TYPE_VALUE: {
++                    TextSettingsCell cell = (TextSettingsCell) holder.itemView;
++                    cell.setTextAndValue(LocaleController.getString(R.string.ModVersion), ModConfig.MOD_VERSION, false);
++                    break;
++                }
++                default: {
++                    TextInfoPrivacyCell cell = (TextInfoPrivacyCell) holder.itemView;
++                    if (position == ROW_PRIVACY_INFO) {
++                        cell.setText(LocaleController.getString(R.string.ModPrivacyInfo));
++                    } else {
++                        cell.setText(LocaleController.getString(R.string.ModInterfaceInfo));
++                    }
++                    break;
++                }
++            }
++        }
++
++        @Override
++        public int getItemViewType(int position) {
++            switch (position) {
++                case ROW_PRIVACY_HEADER:
++                case ROW_UI_HEADER:
++                case ROW_ABOUT_HEADER:
++                    return TYPE_HEADER;
++                case ROW_NO_TYPING:
++                case ROW_CONFIRM_CALLS:
++                case ROW_HIDE_PREMIUM:
++                case ROW_HIDE_STARS:
++                    return TYPE_CHECK;
++                case ROW_VERSION:
++                    return TYPE_VALUE;
++                default:
++                    return TYPE_INFO;
++            }
++        }
++    }
++
++    @Override
++    protected RecyclerListView getListViewForSimpleGlass() {
++        return listView;
++    }
++
++    @Override
++    public boolean isSupportEdgeToEdge() {
++        return true;
++    }
++}
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 03:10:26.297348376 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 03:10:26.296486178 +0000
+@@ -76,6 +76,7 @@
+ import org.telegram.messenger.LocaleController;
+ import org.telegram.messenger.MediaDataController;
+ import org.telegram.messenger.MessagesController;
++import org.telegram.messenger.ModConfig;
+ import org.telegram.messenger.MessagesStorage;
+ import org.telegram.messenger.NotificationCenter;
+ import org.telegram.messenger.R;
+@@ -804,6 +805,7 @@
+         items.add(SettingCell.Factory.of(8, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.settings_devices, getString(R.string.SettingsDevices), getString(R.string.SettingsDevicesInfo)));
+         items.add(SettingCell.Factory.of(9, IconBackgroundColors.ORANGE_DEEP.top, IconBackgroundColors.ORANGE_DEEP.bottom, R.drawable.settings_power, getString(R.string.SettingsPowerSaving), getString(R.string.SettingsPowerSavingInfo)));
+         items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_language, getString(R.string.SettingsLanguage), LocaleController.getCurrentLanguageName()));
++        items.add(SettingCell.Factory.of(28, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.settings_power, getString(R.string.ModSettings), getString(R.string.ModSettingsInfo)));
+ 
+         items.add(UItem.asShadow(null));
+         if (!walletAbove && getMessagesController().config.walletAvailable.get()) {
+@@ -812,10 +814,10 @@
+             items.add(UItem.asShadow(null));
+         }
+ 
+-        if (!getMessagesController().premiumFeaturesBlocked()) {
++        if (!getMessagesController().premiumFeaturesBlocked() && !ModConfig.isHidePremium()) {
+             items.add(SettingCell.Factory.of(11, 0xFFB659FF, 0xFF617CFF, R.drawable.settings_premium, getString(R.string.TelegramPremium)));
+         }
+-        if (getMessagesController().starsPurchaseAvailable()) {
++        if (getMessagesController().starsPurchaseAvailable() && !ModConfig.isHideStars()) {
+             StarsController c = StarsController.getInstance(currentAccount);
+             long balance = c.getBalance().amount;
+             items.add(SettingCell.Factory.of(12, 0xFFEFA612, 0xFFE77512, R.drawable.settings_stars, getString(R.string.TelegramStars), null, c.balanceAvailable() && balance > 0 ? StarsIntroActivity.formatStarsAmount(c.getBalance(), 0.85f, ' ') : ""));
+@@ -1003,6 +1005,10 @@
+                 presentFragment(new HeaderSettingsActivity());
+                 break;
+             }
++            case 28: {
++                presentSettingFragment(new ModSettingsActivity());
++                break;
++            }
+         }
+     }
+ 
+diff -ruN a/TMessagesProj/src/main/res/values/strings.xml b/TMessagesProj/src/main/res/values/strings.xml
+--- a/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 03:10:26.305512139 +0000
++++ b/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 03:10:26.304465157 +0000
+@@ -11678,4 +11678,18 @@
+     <string name="FpnvConsentCountry">Country</string>
+     <string name="FpnvConsentMccMnc">MCC / MNC</string>
+     <string name="FpnvConsentPhoneNumber">Phone Number</string>
++    <string name="ModSettings">Mod Settings</string>
++    <string name="ModSettingsInfo">Extra features of this mod</string>
++    <string name="ModHeaderPrivacy">Privacy</string>
++    <string name="ModHeaderInterface">Interface</string>
++    <string name="ModHeaderAbout">About</string>
++    <string name="ModNoTyping">Don\'t send typing status</string>
++    <string name="ModConfirmCalls">Confirm before calling</string>
++    <string name="ModPrivacyInfo">The other person will not see \"typing…\" while you write a message.</string>
++    <string name="ModHidePremium">Hide Telegram Premium</string>
++    <string name="ModHideStars">Hide Telegram Stars</string>
++    <string name="ModInterfaceInfo">Hides the selected items in the Settings screen. Reopen Settings to apply.</string>
++    <string name="ModVersion">Mod version</string>
++    <string name="ModCallConfirmTitle">Call</string>
++    <string name="ModCallConfirmText">Are you sure you want to call this user?</string>
+ </resources>
+diff -ruN a/TMessagesProj/src/main/res/values-ru/strings.xml b/TMessagesProj/src/main/res/values-ru/strings.xml
+--- a/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 03:10:26.301233177 +0000
++++ b/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 03:10:26.300437784 +0000
+@@ -263,4 +263,18 @@
+     <string name="RemindTodayAt">\'Отправить сегодня в\' HH:mm</string>
+     <string name="RemindDayAt">\'Отправить\' d MMM \'в\' HH:mm</string>
+     <string name="RemindDayYearAt">\'Напомнить\' d MMM yyyy \'в\' HH:mm</string>
++    <string name="ModSettings">Настройки мода</string>
++    <string name="ModSettingsInfo">Дополнительные функции мода</string>
++    <string name="ModHeaderPrivacy">Приватность</string>
++    <string name="ModHeaderInterface">Интерфейс</string>
++    <string name="ModHeaderAbout">О моде</string>
++    <string name="ModNoTyping">Не отправлять статус «печатает»</string>
++    <string name="ModConfirmCalls">Подтверждение перед звонком</string>
++    <string name="ModPrivacyInfo">Собеседник не увидит «печатает…», пока вы пишете сообщение.</string>
++    <string name="ModHidePremium">Скрыть Telegram Premium</string>
++    <string name="ModHideStars">Скрыть Telegram Stars</string>
++    <string name="ModInterfaceInfo">Скрывает выбранные пункты на экране настроек. Откройте настройки заново, чтобы применить.</string>
++    <string name="ModVersion">Версия мода</string>
++    <string name="ModCallConfirmTitle">Звонок</string>
++    <string name="ModCallConfirmText">Вы уверены, что хотите позвонить этому пользователю?</string>
+ </resources>
+\ No newline at end of file
