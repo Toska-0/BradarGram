@@ -39,8 +39,11 @@ public class FerrumSettingsActivity extends BaseFragment {
     public View createView(Context context) {
         simpleActionBar.setBackButtonImage(R.drawable.ic_ab_back);
         simpleActionBar.setTitle("Ferrum");
-        simpleActionBar.setActionBarMenuOnItemClick(id -> {
-            if (id == -1) finishFragment();
+        simpleActionBar.setActionBarMenuOnItemClick(new org.telegram.ui.ActionBar.ActionBar.ActionBarMenuOnItemClick() {
+            @Override
+            public void onItemClick(int id) {
+                if (id == -1) finishFragment();
+            }
         });
 
         ScrollView scroll = new ScrollView(context);
