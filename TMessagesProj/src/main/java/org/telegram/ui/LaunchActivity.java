@@ -116,6 +116,7 @@ import org.telegram.messenger.ContactsLoadingObserver;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.FerrumConfig;
 import org.telegram.messenger.FingerprintController;
 import org.telegram.messenger.FlagSecureReason;
 import org.telegram.messenger.GenericProvider;
@@ -459,6 +460,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
             AndroidUtilities.isInMultiwindow = isInMultiWindowMode();
         }
         Theme.createCommonChatResources();
+        FerrumConfig.applyAccentTheme(this);
         Theme.createDialogsResources(this);
         if (SharedConfig.passcodeHash.length() != 0 && SharedConfig.appLocked) {
             SharedConfig.lastPauseTime = (int) (SystemClock.elapsedRealtime() / 1000);
