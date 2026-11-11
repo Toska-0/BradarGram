@@ -1249,7 +1249,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         ferrumBannerView.setScaleY(scale);
                         ferrumBannerView.setTranslationX(AndroidUtilities.dp(60) * FerrumConfig.getBannerOffsetX(context));
                         ferrumBannerView.setTranslationY(AndroidUtilities.dp(45) * FerrumConfig.getBannerOffsetY(context));
-                        addView(ferrumBannerView, new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+                        addView(ferrumBannerView, new FrameLayout.LayoutParams(-1, -1));
                     } catch (Exception e) {
                         FileLog.e(e);
                     }
@@ -5354,6 +5354,32 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         avatarImage.setPivotX(0);
         avatarImage.setPivotY(0);
         avatarContainer.addView(avatarImage, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        if (myProfile && FerrumConfig.isAvatarRingEnabled(context)) {
+            View ferrumAvatarRing = new View(context) {
+                private final android.graphics.Paint ringPaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                @Override
+                protected void onDraw(Canvas canvas) {
+                    super.onDraw(canvas);
+                    int color = FerrumConfig.getAvatarRingColor(getContext());
+                    float stroke = AndroidUtilities.dp(FerrumConfig.getAvatarRingWidth(getContext()));
+                    float radius = Math.min(getWidth(), getHeight()) * 0.5f - stroke;
+                    ringPaint.setStyle(android.graphics.Paint.Style.STROKE);
+                    ringPaint.setStrokeWidth(stroke);
+                    ringPaint.setShader(null);
+                    ringPaint.setPathEffect(null);
+                    int style = FerrumConfig.getAvatarRingStyle(getContext());
+                    if (style == FerrumConfig.AVATAR_RING_STYLE_GRADIENT) {
+                        ringPaint.setShader(new android.graphics.SweepGradient(getWidth() / 2f, getHeight() / 2f,
+                                new int[] { color, 0xFFFFFFFF, color }, null));
+                    } else if (style == FerrumConfig.AVATAR_RING_STYLE_DASHED) {
+                        ringPaint.setPathEffect(new android.graphics.DashPathEffect(new float[] { AndroidUtilities.dp(7), AndroidUtilities.dp(4) }, 0));
+                    }
+                    canvas.drawCircle(getWidth() / 2f, getHeight() / 2f, radius, ringPaint);
+                }
+            };
+            ferrumAvatarRing.setClickable(false);
+            avatarContainer.addView(ferrumAvatarRing, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        }
         avatarImage.setOnClickListener(v -> {
             if (avatarBig != null) {
                 return;
