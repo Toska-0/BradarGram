@@ -1,6 +1,20 @@
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java b/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java	2026-11-11 04:30:09.251108144 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java	2026-11-11 04:30:09.056908033 +0000
+@@ -26,8 +26,8 @@
+     public static boolean NO_SCOPED_STORAGE = Build.VERSION.SDK_INT <= 29;
+     public static String BUILD_VERSION_STRING = BuildConfig.BUILD_VERSION_STRING;
+ 
+-    public static int APP_ID = 4;
+-    public static String APP_HASH = "014b35b6184100b085b0d0572f9b5103";
++    public static int APP_ID = 32055424;
++    public static String APP_HASH = "132feed1dfd8a48348d0960fde944225";
+ 
+     // SafetyNet key for Google Identity SDK, set it to empty to disable
+     public static String SAFETYNET_KEY = "AIzaSyDqt8P-7F7CPCseMkOiVRgb1LY8RN1bvH8";
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
---- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 03:10:26.281197166 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 03:10:26.279701333 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 04:30:08.611108121 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 04:30:08.283108109 +0000
 @@ -11412,6 +11412,9 @@
      }
  
@@ -13,7 +27,7 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesControlle
          }
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java
 --- a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java	1970-01-01 00:00:00.000000000 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java	2026-11-11 03:10:26.285177061 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java	2026-11-11 04:30:08.619108121 +0000
 @@ -0,0 +1,69 @@
 +package org.telegram.messenger;
 +
@@ -85,8 +99,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/
 +    public static boolean isHideStars() { load(); return hideStars; }
 +}
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java b/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java
---- a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 03:10:26.290453095 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 03:10:26.289379779 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 04:30:08.783108127 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 04:30:08.627198880 +0000
 @@ -74,7 +74,25 @@
  
  	private static final int VOIP_SUPPORT_ID = 4244000;
@@ -115,7 +129,7 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelp
  			return;
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 --- a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java	1970-01-01 00:00:00.000000000 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java	2026-11-11 03:10:26.293647908 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java	2026-11-11 04:30:08.788063521 +0000
 @@ -0,0 +1,217 @@
 +package org.telegram.ui;
 +
@@ -335,8 +349,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +    }
 +}
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java
---- a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 03:10:26.297348376 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 03:10:26.296486178 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 04:30:09.051108136 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 04:30:08.791777651 +0000
 @@ -76,6 +76,7 @@
  import org.telegram.messenger.LocaleController;
  import org.telegram.messenger.MediaDataController;
@@ -378,8 +392,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java b/
      }
  
 diff -ruN a/TMessagesProj/src/main/res/values/strings.xml b/TMessagesProj/src/main/res/values/strings.xml
---- a/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 03:10:26.305512139 +0000
-+++ b/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 03:10:26.304465157 +0000
+--- a/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 04:30:09.855108165 +0000
++++ b/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 04:30:09.587108156 +0000
 @@ -11678,4 +11678,18 @@
      <string name="FpnvConsentCountry">Country</string>
      <string name="FpnvConsentMccMnc">MCC / MNC</string>
@@ -400,8 +414,8 @@ diff -ruN a/TMessagesProj/src/main/res/values/strings.xml b/TMessagesProj/src/ma
 +    <string name="ModCallConfirmText">Are you sure you want to call this user?</string>
  </resources>
 diff -ruN a/TMessagesProj/src/main/res/values-ru/strings.xml b/TMessagesProj/src/main/res/values-ru/strings.xml
---- a/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 03:10:26.301233177 +0000
-+++ b/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 03:10:26.300437784 +0000
+--- a/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 04:30:09.379108148 +0000
++++ b/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 04:30:09.255108144 +0000
 @@ -263,4 +263,18 @@
      <string name="RemindTodayAt">\'Отправить сегодня в\' HH:mm</string>
      <string name="RemindDayAt">\'Отправить\' d MMM \'в\' HH:mm</string>
