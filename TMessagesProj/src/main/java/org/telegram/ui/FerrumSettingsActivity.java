@@ -9,6 +9,10 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.EditText;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.text.InputType;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -159,13 +163,135 @@ public class FerrumSettingsActivity extends BaseFragment {
 
     private void addSecuritySection(Context context) {
         addHeader(context, "БЕЗОПАСНОСТЬ");
-        addCard(context, "Проверка файлов", "Проверка на базе VirusTotal или локальных сигнатур ещё не подключена. Этот экран не объявляет файлы безопасными и не отправляет их третьим сторонам.");
+        addCard(context, "Проверка файлов", "Выбери движок анализа. Ключи хранятся локально в зашифрованном виде с использованием Android Keystore.");
+
         android.widget.Switch enabled = new android.widget.Switch(context);
         enabled.setText("Показывать пункт проверки файлов");
         enabled.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         enabled.setChecked(FerrumConfig.isAntivirusEnabled(context));
         enabled.setOnCheckedChangeListener((button, checked) -> FerrumConfig.setAntivirusEnabled(context, checked));
         content.addView(enabled, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(52)));
+
+        RadioGroup engineGroup = new RadioGroup(context);
+        engineGroup.setOrientation(RadioGroup.VERTICAL);
+        RadioButton aiMode = new RadioButton(context);
+        aiMode.setText("AI-анализ");
+        aiMode.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        aiMode.setId(View.generateViewId());
+        RadioButton vtMode = new RadioButton(context);
+        vtMode.setText("VirusTotal");
+        vtMode.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        vtMode.setId(View.generateViewId());
+        engineGroup.addView(aiMode);
+        engineGroup.addView(vtMode);
+        content.addView(engineGroup, new LinearLayout.LayoutParams(-1, -2));
+
+        LinearLayout aiPanel = new LinearLayout(context);
+        aiPanel.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout vtPanel = new LinearLayout(context);
+        vtPanel.setOrientation(LinearLayout.VERTICAL);
+
+        TextView providerLabel = new TextView(context);
+        providerLabel.setText("AI-провайдер");
+        providerLabel.setTextSize(13);
+        providerLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        aiPanel.addView(providerLabel);
+
+        RadioGroup providerGroup = new RadioGroup(context);
+        providerGroup.setOrientation(RadioGroup.VERTICAL);
+        String[] providers = new String[] { "Gemini", "Claude", "ChatGPT" };
+        for (String provider : providers) {
+            RadioButton option = new RadioButton(context);
+            option.setText(provider);
+            option.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            option.setTag(provider);
+            option.setId(View.generateViewId());
+            providerGroup.addView(option);
+            if (provider.equals(FerrumConfig.getAiProvider(context))) providerGroup.check(option.getId());
+        }
+        aiPanel.addView(providerGroup);
+
+        EditText aiKey = new EditText(context);
+        aiKey.setSingleLine(true);
+        aiKey.setTextSize(14);
+        aiKey.setHint("API-ключ выбранного AI-провайдера");
+        aiKey.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        aiKey.setText(FerrumConfig.getAiApiKey(context));
+        aiPanel.addView(aiKey, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(52)));
+
+        Button saveAi = new Button(context);
+        saveAi.setText("Сохранить AI API-ключ");
+        saveAi.setAllCaps(false);
+        saveAi.setOnClickListener(v -> {
+            int checkedId = providerGroup.getCheckedRadioButtonId();
+            View checked = providerGroup.findViewById(checkedId);
+            if (checked instanceof RadioButton) {
+                FerrumConfig.setAiProvider(context, String.valueOf(checked.getTag()));
+            }
+            try {
+                FerrumConfig.setAiApiKey(context, aiKey.getText().toString());
+                Toast.makeText(context, "AI-настройки сохранены", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                Toast.makeText(context, "Не удалось безопасно сохранить ключ", Toast.LENGTH_LONG).show();
+            }
+        });
+        aiPanel.addView(saveAi, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(48)));
+
+        TextView vtLabel = new TextView(context);
+        vtLabel.setText("API-ключ VirusTotal");
+        vtLabel.setTextSize(13);
+        vtLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        vtPanel.addView(vtLabel);
+
+        EditText vtKey = new EditText(context);
+        vtKey.setSingleLine(true);
+        vtKey.setTextSize(14);
+        vtKey.setHint("Вставь API-ключ VirusTotal");
+        vtKey.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        vtKey.setText(FerrumConfig.getVirusTotalApiKey(context));
+        vtPanel.addView(vtKey, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(52)));
+
+        Button saveVt = new Button(context);
+        saveVt.setText("Сохранить VirusTotal API-ключ");
+        saveVt.setAllCaps(false);
+        saveVt.setOnClickListener(v -> {
+            try {
+                FerrumConfig.setVirusTotalApiKey(context, vtKey.getText().toString());
+                Toast.makeText(context, "Ключ VirusTotal сохранён", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                Toast.makeText(context, "Не удалось безопасно сохранить ключ", Toast.LENGTH_LONG).show();
+            }
+        });
+        vtPanel.addView(saveVt, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(48)));
+
+        TextView notice = new TextView(context);
+        notice.setText("Важно: этот экран пока сохраняет выбор движка и ключи. Сетевые запросы к AI и VirusTotal и проверка файлов через эти сервисы ещё не подключены.");
+        notice.setTextSize(12);
+        notice.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        notice.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(8), AndroidUtilities.dp(4), AndroidUtilities.dp(8));
+
+        content.addView(aiPanel, new LinearLayout.LayoutParams(-1, -2));
+        content.addView(vtPanel, new LinearLayout.LayoutParams(-1, -2));
+        content.addView(notice, new LinearLayout.LayoutParams(-1, -2));
+
+        int engine = FerrumConfig.getAntivirusEngine(context);
+        engineGroup.check(engine == FerrumConfig.ANTIVIRUS_ENGINE_VIRUSTOTAL ? vtMode.getId() : aiMode.getId());
+        aiPanel.setVisibility(engine == FerrumConfig.ANTIVIRUS_ENGINE_AI ? View.VISIBLE : View.GONE);
+        vtPanel.setVisibility(engine == FerrumConfig.ANTIVIRUS_ENGINE_VIRUSTOTAL ? View.VISIBLE : View.GONE);
+        engineGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            boolean useVt = checkedId == vtMode.getId();
+            FerrumConfig.setAntivirusEngine(context, useVt
+                    ? FerrumConfig.ANTIVIRUS_ENGINE_VIRUSTOTAL
+                    : FerrumConfig.ANTIVIRUS_ENGINE_AI);
+            aiPanel.setVisibility(useVt ? View.GONE : View.VISIBLE);
+            vtPanel.setVisibility(useVt ? View.VISIBLE : View.GONE);
+        });
+        providerGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            View checked = providerGroup.findViewById(checkedId);
+            if (checked instanceof RadioButton) {
+                FerrumConfig.setAiProvider(context, String.valueOf(checked.getTag()));
+            }
+        });
     }
 
     private void addSyncSection(Context context) {
