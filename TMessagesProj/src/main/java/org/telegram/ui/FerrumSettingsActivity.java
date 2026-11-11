@@ -26,9 +26,9 @@ import org.telegram.messenger.ModUtils;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.AlertDialog;
+import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Cells.TextSettingsCell;
@@ -76,6 +76,7 @@ public class FerrumSettingsActivity extends BaseFragment {
     private final ArrayList<Row> rows = new ArrayList<>();
     private RecyclerListView listView;
     private ListAdapter adapter;
+    private String searchQuery;
 
     @Override
     protected boolean useSimpleActionBar() { return true; }
@@ -87,6 +88,21 @@ public class FerrumSettingsActivity extends BaseFragment {
         simpleActionBar.setTitle("Ferrum");
         simpleActionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
             @Override public void onItemClick(int id) { if (id == -1) finishFragment(); }
+        });
+        ActionBarMenuItem searchItem = simpleActionBar.createMenu().addItem(1, R.drawable.outline_search_1_24);
+        searchItem.setIsSearchField(true);
+        searchItem.setActionBarMenuItemSearchListener(new ActionBarMenuItem.ActionBarMenuItemSearchListener() {
+            @Override
+            public void onTextChanged(EditText editText) {
+                String q = editText.getText() == null ? "" : editText.getText().toString().trim().toLowerCase();
+                searchQuery = q.isEmpty() ? null : q;
+                applySearchFilter();
+            }
+            @Override
+            public void onSearchCollapse() {
+                searchQuery = null;
+                applySearchFilter();
+            }
         });
 
         FrameLayout frame = new FrameLayout(context);
@@ -104,72 +120,81 @@ public class FerrumSettingsActivity extends BaseFragment {
         return fragmentView;
     }
 
-    private void header(String title) { rows.add(new Row(HEADER, 0, title, null, false)); }
-    private void check(int id, String title, boolean checked) { rows.add(new Row(CHECK, id, title, null, checked)); }
-    private void value(int id, String title, String value) { rows.add(new Row(VALUE, id, title, value, false)); }
-    private void info(String text) { rows.add(new Row(INFO, 0, text, null, false)); }
+    private void header(String title) { if (isFiltering()) return; rows.add(new Row(HEADER, 0, title, null, false)); }
+    private void check(int id, String title, boolean checked) { if (!matches(title)) return; rows.add(new Row(CHECK, id, title, null, checked)); }
+    private void value(int id, String title, String value) { if (!matches(title)) return; rows.add(new Row(VALUE, id, title, value, false)); }
+    private void info(String text) { if (!matches(text)) return; rows.add(new Row(INFO, 0, text, null, false)); }
+    private boolean isFiltering() { return searchQuery != null && !searchQuery.isEmpty(); }
+    private boolean matches(String text) { return !isFiltering() || (text != null && text.toLowerCase().contains(searchQuery)); }
+    private void applySearchFilter() {
+        Context c = getParentActivity();
+        if (c == null) return;
+        rebuildRows(c);
+        if (adapter != null) adapter.notifyDataSetChanged();
+        if (listView != null) listView.scrollToPosition(0);
+    }
 
     private void rebuildRows(Context c) {
         rows.clear();
-        header("ОФОРМЛЕНИЕ");
-        value(ACCENT, "Акцентный цвет", "Изменить");
-        check(NO_BLUR, "Отключить размытие и Liquid Glass", ModConfig.isNoBlur());
-        value(COLOR_PACK, "Цветовая палитра", packName(ModConfig.getColorPack()));
-        info("Изменения размытия могут потребовать перезапуска приложения.");
+        header(LocaleController.getString(R.string.FerrumSectionAppearance));
+        value(ACCENT, LocaleController.getString(R.string.FerrumAccentColor), LocaleController.getString(R.string.FerrumChange));
+        check(NO_BLUR, LocaleController.getString(R.string.FerrumNoBlur), ModConfig.isNoBlur());
+        value(COLOR_PACK, LocaleController.getString(R.string.FerrumColorPalette), packName(ModConfig.getColorPack()));
+        info(LocaleController.getString(R.string.FerrumBlurRestartInfo));
 
-        header("БАННЕР ПРОФИЛЯ");
-        value(BANNER_PICK, "Выбрать изображение", "Галерея");
-        value(BANNER_REMOVE, "Удалить баннер", null);
-        value(BANNER_SCALE, "Масштаб баннера", percent(FerrumConfig.getBannerScale(c)));
-        value(BANNER_X, "Положение по горизонтали", percent(FerrumConfig.getBannerOffsetX(c)));
-        value(BANNER_Y, "Положение по вертикали", percent(FerrumConfig.getBannerOffsetY(c)));
+        header(LocaleController.getString(R.string.FerrumSectionBanner));
+        value(BANNER_PICK, LocaleController.getString(R.string.FerrumBannerPick), LocaleController.getString(R.string.FerrumGallery));
+        value(BANNER_REMOVE, LocaleController.getString(R.string.FerrumBannerRemove), null);
+        value(BANNER_SCALE, LocaleController.getString(R.string.FerrumBannerScale), percent(FerrumConfig.getBannerScale(c)));
+        value(BANNER_X, LocaleController.getString(R.string.FerrumBannerX), percent(FerrumConfig.getBannerOffsetX(c)));
+        value(BANNER_Y, LocaleController.getString(R.string.FerrumBannerY), percent(FerrumConfig.getBannerOffsetY(c)));
 
-        header("АВАТАР");
-        check(AVATAR_RING, "Включить обводку аватара", FerrumConfig.isAvatarRingEnabled(c));
-        value(AVATAR_WIDTH, "Толщина обводки", String.valueOf(FerrumConfig.getAvatarRingWidth(c)));
-        value(AVATAR_COLOR, "Цвет обводки", "Выбрать");
-        value(AVATAR_STYLE, "Стиль обводки", ringStyle(FerrumConfig.getAvatarRingStyle(c)));
+        header(LocaleController.getString(R.string.FerrumSectionAvatar));
+        check(AVATAR_RING, LocaleController.getString(R.string.FerrumAvatarRing), FerrumConfig.isAvatarRingEnabled(c));
+        value(AVATAR_WIDTH, LocaleController.getString(R.string.FerrumRingWidth), String.valueOf(FerrumConfig.getAvatarRingWidth(c)));
+        value(AVATAR_COLOR, LocaleController.getString(R.string.FerrumRingColor), LocaleController.getString(R.string.FerrumChange));
+        value(AVATAR_STYLE, LocaleController.getString(R.string.FerrumRingStyle), ringStyle(FerrumConfig.getAvatarRingStyle(c)));
 
-        header("БЕЗОПАСНОСТЬ");
-        check(40, "Показывать пункт проверки файлов", FerrumConfig.isAntivirusEnabled(c));
+        header(LocaleController.getString(R.string.FerrumSectionSecurity));
+        check(40, LocaleController.getString(R.string.FerrumShowFileCheck), FerrumConfig.isAntivirusEnabled(c));
         if (FerrumConfig.isAntivirusEnabled(c)) {
-        value(AV_ENGINE, "Движок анализа", FerrumConfig.getAntivirusEngine(c) == FerrumConfig.ANTIVIRUS_ENGINE_VIRUSTOTAL ? "VirusTotal" : "AI-анализ");
-        value(AI_PROVIDER, "AI-провайдер", FerrumConfig.getAiProvider(c));
-        value(AI_KEY, "API-ключ AI", masked(FerrumConfig.getAiApiKey(c)));
-        value(VT_KEY, "API-ключ VirusTotal", masked(FerrumConfig.getVirusTotalApiKey(c)));
-        value(SCAN, "Проверить файл", "Выбрать файл");
-        info("Сетевые запросы к AI и VirusTotal пока не подключены. Доступен локальный эвристический анализ.");
+            value(AV_ENGINE, LocaleController.getString(R.string.FerrumAvEngine), FerrumConfig.getAntivirusEngine(c) == FerrumConfig.ANTIVIRUS_ENGINE_VIRUSTOTAL ? "VirusTotal" : LocaleController.getString(R.string.FerrumEngineAi));
+            value(AI_PROVIDER, LocaleController.getString(R.string.FerrumAiProvider), FerrumConfig.getAiProvider(c));
+            value(AI_KEY, LocaleController.getString(R.string.FerrumAiKey), masked(FerrumConfig.getAiApiKey(c)));
+            value(VT_KEY, LocaleController.getString(R.string.FerrumVtKey), masked(FerrumConfig.getVirusTotalApiKey(c)));
+            value(SCAN, LocaleController.getString(R.string.FerrumScanFile), LocaleController.getString(R.string.FerrumChooseFile));
+            info(LocaleController.getString(R.string.FerrumAvInfo));
         }
 
-        header("ПРИВАТНОСТЬ И СООБЩЕНИЯ");
-        check(NO_TYPING, "Не отправлять статус «печатает…»", ModConfig.get(ModConfig.KEY_NO_TYPING));
-        check(NO_READ, "Читать без отметки о прочтении", ModConfig.get(ModConfig.KEY_NO_READ));
-        check(SAVE_DELETED, "Сохранять удалённые сообщения", ModConfig.get(ModConfig.KEY_SAVE_DELETED));
-        check(CONFIRM_CALLS, "Подтверждать исходящие звонки", ModConfig.get(ModConfig.KEY_CONFIRM_CALLS));
+        header(LocaleController.getString(R.string.FerrumSectionPrivacy));
+        check(NO_TYPING, LocaleController.getString(R.string.FerrumNoTyping), ModConfig.get(ModConfig.KEY_NO_TYPING));
+        check(NO_READ, LocaleController.getString(R.string.FerrumNoRead), ModConfig.get(ModConfig.KEY_NO_READ));
+        check(SAVE_DELETED, LocaleController.getString(R.string.FerrumSaveDeleted), ModConfig.get(ModConfig.KEY_SAVE_DELETED));
+        check(CONFIRM_CALLS, LocaleController.getString(R.string.FerrumConfirmCalls), ModConfig.get(ModConfig.KEY_CONFIRM_CALLS));
 
-        header("TELEGRAM");
-        check(LOCAL_PREMIUM, "Локальный Telegram Premium", ModConfig.get(ModConfig.KEY_LOCAL_PREMIUM));
-        check(HIDE_PREMIUM, "Скрыть Telegram Premium", ModConfig.get(ModConfig.KEY_HIDE_PREMIUM));
-        check(HIDE_STARS, "Скрыть Telegram Stars", ModConfig.get(ModConfig.KEY_HIDE_STARS));
-        info("Локальный Premium меняет только отображение на устройстве. Серверные функции требуют настоящую подписку.");
+        header(LocaleController.getString(R.string.FerrumSectionTelegram));
+        check(LOCAL_PREMIUM, LocaleController.getString(R.string.FerrumLocalPremium), ModConfig.get(ModConfig.KEY_LOCAL_PREMIUM));
+        check(HIDE_PREMIUM, LocaleController.getString(R.string.FerrumHidePremium), ModConfig.get(ModConfig.KEY_HIDE_PREMIUM));
+        check(HIDE_STARS, LocaleController.getString(R.string.FerrumHideStars), ModConfig.get(ModConfig.KEY_HIDE_STARS));
+        info(LocaleController.getString(R.string.FerrumPremiumInfo));
 
-        header("СИНХРОНИЗАЦИЯ");
-        value(EXPORT, "Экспортировать настройки", "JSON");
-        value(IMPORT, "Импортировать настройки", "JSON");
-        info("Облачная синхронизация пока не подключена. Баннер профиля не переносится. Экспорт не содержит токены и переписки.");
+        header(LocaleController.getString(R.string.FerrumSectionSync));
+        value(EXPORT, LocaleController.getString(R.string.FerrumExport), "JSON");
+        value(IMPORT, LocaleController.getString(R.string.FerrumImport), "JSON");
+        info(LocaleController.getString(R.string.FerrumSyncInfo));
 
-        header("О FERRUM");
-        value(0, "Версия Ferrum", ModConfig.MOD_VERSION);
+        header(LocaleController.getString(R.string.FerrumSectionAbout));
+        value(0, LocaleController.getString(R.string.FerrumVersion), ModConfig.MOD_VERSION);
     }
 
     private String percent(float value) { return Math.round(value * 100) + "%"; }
-    private String masked(String key) { return key == null || key.isEmpty() ? "Не задан" : "••••••••"; }
+    private String masked(String key) { return key == null || key.isEmpty() ? LocaleController.getString(R.string.FerrumKeyNotSet) : "••••••••"; }
     private String packName(int pack) {
         if (pack < 0 || pack >= ModTheme.PACK_NAMES.length) pack = 0;
         return LocaleController.getString(ModTheme.PACK_NAMES[pack]);
     }
     private String ringStyle(int style) {
-        String[] names = {"Сплошная", "Градиент", "Пунктир"};
+        String[] names = {LocaleController.getString(R.string.FerrumRingSolid), LocaleController.getString(R.string.FerrumRingGradient), LocaleController.getString(R.string.FerrumRingDashed)};
         return style >= 0 && style < names.length ? names[style] : names[0];
     }
 
@@ -215,17 +240,17 @@ public class FerrumSettingsActivity extends BaseFragment {
     private void refresh() { if (getParentActivity() != null) { rebuildRows(getParentActivity()); if (adapter != null) adapter.notifyDataSetChanged(); } }
     private void showRestartDialog() {
         AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
-        b.setTitle("Нужен перезапуск");
-        b.setMessage("Перезапустить Ferrum, чтобы применить изменение?");
-        b.setPositiveButton("Перезапустить", (d, w) -> ModUtils.restartApp());
-        b.setNegativeButton("Позже", null);
+        b.setTitle(LocaleController.getString(R.string.FerrumRestartTitle));
+        b.setMessage(LocaleController.getString(R.string.FerrumRestartText));
+        b.setPositiveButton(LocaleController.getString(R.string.FerrumRestartNow), (d, w) -> ModUtils.restartApp());
+        b.setNegativeButton(LocaleController.getString(R.string.FerrumLater), null);
         showDialog(b.create());
     }
     private void showAccentDialog() {
         final int[] colors = {0xFF6E9BFF,0xFF56C6A9,0xFFB58AFF,0xFFFF9B70,0xFFE879A8,0xFFE5B85C};
-        String[] names = {"Синий","Мятный","Сиреневый","Персиковый","Розовый","Золотой"};
+        String[] names = {LocaleController.getString(R.string.FerrumColorBlue),LocaleController.getString(R.string.FerrumColorMint),LocaleController.getString(R.string.FerrumColorLavender),LocaleController.getString(R.string.FerrumColorPeach),LocaleController.getString(R.string.FerrumColorPink),LocaleController.getString(R.string.FerrumColorGold)};
         AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
-        b.setTitle("Акцентный цвет");
+        b.setTitle(LocaleController.getString(R.string.FerrumAccentColor));
         b.setItems(names, (d, which) -> { FerrumConfig.setAccentColor(getParentActivity(), colors[which]); FerrumConfig.applyAccentTheme(getParentActivity()); refresh(); });
         showDialog(b.create());
     }
@@ -233,7 +258,7 @@ public class FerrumSettingsActivity extends BaseFragment {
         CharSequence[] names = new CharSequence[ModTheme.PACK_NAMES.length];
         for (int i=0;i<names.length;i++) names[i]=packName(i);
         AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
-        b.setTitle("Цветовая палитра");
+        b.setTitle(LocaleController.getString(R.string.FerrumColorPalette));
         b.setItems(names, (d, which) -> { ModConfig.setColorPack(which); ModTheme.applyLive(); refresh(); });
         b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
         showDialog(b.create());
@@ -243,39 +268,39 @@ public class FerrumSettingsActivity extends BaseFragment {
         EditText input=new EditText(c); input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
         int current=id==BANNER_SCALE ? Math.round(FerrumConfig.getBannerScale(c)*100) : Math.round((id==BANNER_X?FerrumConfig.getBannerOffsetX(c):FerrumConfig.getBannerOffsetY(c))*100);
         input.setText(String.valueOf(current));
-        AlertDialog.Builder b=new AlertDialog.Builder(c); b.setTitle(id==BANNER_SCALE?"Масштаб баннера (%)":"Смещение баннера (%)"); b.setView(input);
+        AlertDialog.Builder b=new AlertDialog.Builder(c); b.setTitle(id==BANNER_SCALE?LocaleController.getString(R.string.FerrumBannerScaleTitle):LocaleController.getString(R.string.FerrumBannerOffset)); b.setView(input);
         b.setPositiveButton(LocaleController.getString(R.string.OK), (d,w)->{ try { int v=Integer.parseInt(input.getText().toString()); if(id==BANNER_SCALE) FerrumConfig.setBannerScale(c,Math.max(50,Math.min(300,v))/100f); else if(id==BANNER_X) FerrumConfig.setBannerOffsetX(c,Math.max(-100,Math.min(100,v))/100f); else FerrumConfig.setBannerOffsetY(c,Math.max(-100,Math.min(100,v))/100f); refresh(); } catch(Exception ignored){} });
         b.setNegativeButton(LocaleController.getString(R.string.Cancel),null); showDialog(b.create());
     }
     private void showAvatarWidthDialog() {
         EditText input=new EditText(getParentActivity()); input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL); input.setText(String.valueOf(FerrumConfig.getAvatarRingWidth(getParentActivity())));
-        AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle("Толщина обводки"); b.setView(input);
+        AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle(LocaleController.getString(R.string.FerrumRingWidth)); b.setView(input);
         b.setPositiveButton(LocaleController.getString(R.string.OK),(d,w)->{try{FerrumConfig.setAvatarRingWidth(getParentActivity(),Math.max(1f,Math.min(12f,Float.parseFloat(input.getText().toString()))));refresh();}catch(Exception ignored){}});
         b.setNegativeButton(LocaleController.getString(R.string.Cancel),null); showDialog(b.create());
     }
     private void showAvatarColorDialog() {
         int[] colors={0xFF6E9BFF,0xFF56C6A9,0xFFB58AFF,0xFFFF9B70,Color.WHITE};
-        String[] names={"Синий","Мятный","Сиреневый","Персиковый","Белый"};
-        AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle("Цвет обводки");
+        String[] names={LocaleController.getString(R.string.FerrumColorBlue),LocaleController.getString(R.string.FerrumColorMint),LocaleController.getString(R.string.FerrumColorLavender),LocaleController.getString(R.string.FerrumColorPeach),LocaleController.getString(R.string.FerrumColorWhite)};
+        AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle(LocaleController.getString(R.string.FerrumRingColor));
         b.setItems(names,(d,w)->{FerrumConfig.setAvatarRingColor(getParentActivity(),colors[w]);refresh();}); showDialog(b.create());
     }
     private void showAvatarStyleDialog() {
-        String[] styles={"Сплошная","Градиент","Пунктир"}; AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle("Стиль обводки");
+        String[] styles={LocaleController.getString(R.string.FerrumRingSolid),LocaleController.getString(R.string.FerrumRingGradient),LocaleController.getString(R.string.FerrumRingDashed)}; AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle(LocaleController.getString(R.string.FerrumRingStyle));
         b.setItems(styles,(d,w)->{FerrumConfig.setAvatarRingStyle(getParentActivity(),w);refresh();}); showDialog(b.create());
     }
     private void showEngineDialog() {
-        String[] engines={"AI-анализ","VirusTotal"}; AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle("Движок анализа");
+        String[] engines={LocaleController.getString(R.string.FerrumEngineAi),"VirusTotal"}; AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle(LocaleController.getString(R.string.FerrumAvEngine));
         b.setItems(engines,(d,w)->{FerrumConfig.setAntivirusEngine(getParentActivity(),w==1?FerrumConfig.ANTIVIRUS_ENGINE_VIRUSTOTAL:FerrumConfig.ANTIVIRUS_ENGINE_AI);refresh();}); showDialog(b.create());
     }
     private void showProviderDialog() {
-        String[] providers={"Gemini","Claude","ChatGPT"}; AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle("AI-провайдер");
+        String[] providers={"Gemini","Claude","ChatGPT"}; AlertDialog.Builder b=new AlertDialog.Builder(getParentActivity()); b.setTitle(LocaleController.getString(R.string.FerrumAiProvider));
         b.setItems(providers,(d,w)->{FerrumConfig.setAiProvider(getParentActivity(),providers[w]);refresh();}); showDialog(b.create());
     }
     private void showSecretDialog(boolean ai) {
         Context c=getParentActivity(); EditText input=new EditText(c); input.setSingleLine(true); input.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        input.setHint("API-ключ"); input.setText(ai?FerrumConfig.getAiApiKey(c):FerrumConfig.getVirusTotalApiKey(c));
-        AlertDialog.Builder b=new AlertDialog.Builder(c); b.setTitle(ai?"AI API-ключ":"API-ключ VirusTotal"); b.setView(input);
-        b.setPositiveButton(LocaleController.getString(R.string.OK),(d,w)->{try{if(ai)FerrumConfig.setAiApiKey(c,input.getText().toString());else FerrumConfig.setVirusTotalApiKey(c,input.getText().toString());Toast.makeText(c,"Ключ сохранён",Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(c,"Не удалось сохранить ключ",Toast.LENGTH_LONG).show();}refresh();});
+        input.setHint(LocaleController.getString(R.string.FerrumKeyHint)); input.setText(ai?FerrumConfig.getAiApiKey(c):FerrumConfig.getVirusTotalApiKey(c));
+        AlertDialog.Builder b=new AlertDialog.Builder(c); b.setTitle(ai?LocaleController.getString(R.string.FerrumAiKey):LocaleController.getString(R.string.FerrumVtKey)); b.setView(input);
+        b.setPositiveButton(LocaleController.getString(R.string.OK),(d,w)->{try{if(ai)FerrumConfig.setAiApiKey(c,input.getText().toString());else FerrumConfig.setVirusTotalApiKey(c,input.getText().toString());Toast.makeText(c,LocaleController.getString(R.string.FerrumKeySaved),Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(c,LocaleController.getString(R.string.FerrumKeySaveFailed),Toast.LENGTH_LONG).show();}refresh();});
         b.setNegativeButton(LocaleController.getString(R.string.Cancel),null); showDialog(b.create());
     }
     private void openDocument(String mime,int request,boolean create) {
@@ -291,16 +316,19 @@ public class FerrumSettingsActivity extends BaseFragment {
         @Override public int getItemViewType(int p){return rows.get(p).type;}
         @Override public boolean isEnabled(RecyclerView.ViewHolder h){int p=h.getAdapterPosition();return p>=0&&p<rows.size()&&(rows.get(p).type==CHECK||rows.get(p).type==VALUE);}
         @NonNull @Override public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent,int type){
-            View v=type==HEADER?new HeaderCell(context):type==CHECK?new TextCheckCell(context):type==VALUE?new TextSettingsCell(context):new TextInfoPrivacyCell(context);
+            View v=type==CHECK?new TextCheckCell(context):type==VALUE?new TextSettingsCell(context):new TextInfoPrivacyCell(context);
             v.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT,RecyclerView.LayoutParams.WRAP_CONTENT));
             return new RecyclerListView.Holder(v);
         }
         @Override public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h,int p){
             Row r=rows.get(p); boolean divider=p+1<rows.size()&&(rows.get(p+1).type==CHECK||rows.get(p+1).type==VALUE);
-            if(r.type==HEADER)((HeaderCell)h.itemView).setText(r.title);
-            else if(r.type==CHECK)((TextCheckCell)h.itemView).setTextAndCheck(r.title,r.checked,divider);
+            if(r.type==CHECK)((TextCheckCell)h.itemView).setTextAndCheck(r.title,r.checked,divider);
             else if(r.type==VALUE)((TextSettingsCell)h.itemView).setTextAndValue(r.title,r.value==null?"":r.value,divider);
-            else ((TextInfoPrivacyCell)h.itemView).setText(r.title);
+            else {
+                TextInfoPrivacyCell shadowCell=(TextInfoPrivacyCell)h.itemView;
+                shadowCell.setText(r.title);
+                shadowCell.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+            }
         }
     }
 
@@ -313,18 +341,18 @@ public class FerrumSettingsActivity extends BaseFragment {
             if(requestCode==REQUEST_EXPORT){
                 String json=FerrumConfig.exportPortableSettings(c);
                 try(OutputStream out=c.getContentResolver().openOutputStream(uri)){if(out==null)throw new IllegalStateException("Не удалось открыть файл");out.write(json.getBytes(StandardCharsets.UTF_8));}
-                Toast.makeText(c,"Настройки Ferrum экспортированы",Toast.LENGTH_LONG).show();
+                Toast.makeText(c,LocaleController.getString(R.string.FerrumExportedToast),Toast.LENGTH_LONG).show();
             } else if(requestCode==REQUEST_IMPORT){
                 StringBuilder json=new StringBuilder();
                 try(InputStream in=c.getContentResolver().openInputStream(uri)){if(in==null)throw new IllegalStateException("Не удалось открыть файл");byte[] buf=new byte[4096];int n;while((n=in.read(buf))!=-1){if(json.length()+n>128*1024)throw new IllegalArgumentException("Файл слишком большой");json.append(new String(buf,0,n,StandardCharsets.UTF_8));}}
                 FerrumConfig.importPortableSettings(c,json.toString()); FerrumConfig.applyAccentTheme(c); ModTheme.applyLive();
-                Toast.makeText(c,"Настройки импортированы",Toast.LENGTH_LONG).show(); refresh();
+                Toast.makeText(c,LocaleController.getString(R.string.FerrumImportedToast),Toast.LENGTH_LONG).show(); refresh();
             } else if(requestCode==REQUEST_BANNER){
                 c.getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION); FerrumConfig.setProfileBannerUri(c,uri.toString()); refresh();
             } else if(requestCode==REQUEST_SCAN){
-                FerrumAntivirus.scan(c,uri,result->{android.app.Activity activity=getParentActivity();if(activity==null)return;StringBuilder msg=new StringBuilder();msg.append("Файл: ").append(result.fileName).append("\nРазмер: ").append(result.size).append(" байт\nSHA-256: ").append(result.sha256).append("\nУровень риска: ").append(result.riskLabel());for(String finding:result.findings)msg.append("\n• ").append(finding);new AlertDialog.Builder(activity).setTitle("Результат проверки").setMessage(msg.toString()).setPositiveButton("Закрыть",null).show();});
+                FerrumAntivirus.scan(c,uri,result->{android.app.Activity activity=getParentActivity();if(activity==null)return;StringBuilder msg=new StringBuilder();msg.append(String.format(LocaleController.getString(R.string.FerrumScanFileLabel), result.fileName)).append("\n").append(String.format(LocaleController.getString(R.string.FerrumScanSizeLabel), result.size)).append("\n").append(String.format(LocaleController.getString(R.string.FerrumScanShaLabel), result.sha256)).append("\n").append(String.format(LocaleController.getString(R.string.FerrumScanRiskLabel), result.riskLabel()));for(String finding:result.findings)msg.append("\n• ").append(finding);new AlertDialog.Builder(activity).setTitle(LocaleController.getString(R.string.FerrumScanResultTitle)).setMessage(msg.toString()).setPositiveButton(LocaleController.getString(R.string.FerrumClose),null).show();});
             }
-        } catch(Exception e){Toast.makeText(c,"Ошибка: "+e.getMessage(),Toast.LENGTH_LONG).show();}
+        } catch(Exception e){Toast.makeText(c, String.format(LocaleController.getString(R.string.FerrumErrorToast), e.getMessage()),Toast.LENGTH_LONG).show();}
     }
 
 }
