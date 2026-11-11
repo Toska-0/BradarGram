@@ -23,6 +23,7 @@ import org.telegram.messenger.FerrumConfig;
 import org.telegram.messenger.FerrumAntivirus;
 import org.telegram.messenger.ModConfig;
 import org.telegram.messenger.ModTheme;
+import org.telegram.messenger.ModUtils;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
@@ -40,6 +41,8 @@ public class FerrumSettingsActivity extends BaseFragment {
     private LinearLayout content;
     private TextView bannerStatus;
     private TextView ringWidthLabel;
+    private ModBlurPreviewView legacyBlurPreview;
+    private ModColorPreviewView legacyColorPreview;
 
     public FerrumSettingsActivity() {
         super();
@@ -313,16 +316,16 @@ public class FerrumSettingsActivity extends BaseFragment {
         addHeader(context, "ДОПОЛНИТЕЛЬНОЕ ОФОРМЛЕНИЕ");
         addModSwitch(context, "Отключить размытие и Liquid Glass", ModConfig.KEY_NO_BLUR, true);
         TextView blurLabel = addValue(context, "Предпросмотр размытия");
-        ModBlurPreviewView blurPreview = new ModBlurPreviewView(context);
-        blurPreview.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-        blurPreview.setBlurDisabled(ModConfig.isNoBlur());
-        content.addView(blurPreview, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(136)));
+        legacyBlurPreview = new ModBlurPreviewView(context);
+        legacyBlurPreview.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        legacyBlurPreview.setBlurDisabled(ModConfig.isNoBlur());
+        content.addView(legacyBlurPreview, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(136)));
         addButton(context, "Выбрать цветовую палитру", v -> showModColorPackDialog(context));
         TextView colorLabel = addValue(context, "Предпросмотр цветовой палитры");
-        ModColorPreviewView colorPreview = new ModColorPreviewView(context);
-        colorPreview.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-        colorPreview.setPack(ModConfig.getColorPack());
-        content.addView(colorPreview, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(220)));
+        legacyColorPreview = new ModColorPreviewView(context);
+        legacyColorPreview.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        legacyColorPreview.setPack(ModConfig.getColorPack());
+        content.addView(legacyColorPreview, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(220)));
         addValue(context, "Палитры меняют основные цвета интерфейса Telegram. Для отключения размытия может потребоваться перезапуск.");
     }
 
@@ -336,8 +339,16 @@ public class FerrumSettingsActivity extends BaseFragment {
         toggle.setChecked(ModConfig.get(key));
         toggle.setOnCheckedChangeListener((button, checked) -> {
             ModConfig.toggle(key);
+            if (ModConfig.KEY_NO_BLUR.equals(key) && legacyBlurPreview != null) {
+                legacyBlurPreview.setBlurDisabled(checked);
+            }
             if (restartRequired) {
-                Toast.makeText(context, "Изменение сохранено. Для полного применения перезапусти Ferrum.", Toast.LENGTH_LONG).show();
+                new android.app.AlertDialog.Builder(context)
+                        .setTitle("Нужен перезапуск")
+                        .setMessage("Перезапустить Ferrum, чтобы применить изменение?")
+                        .setPositiveButton("Перезапустить", (dialog, which) -> ModUtils.restartApp())
+                        .setNegativeButton("Позже", null)
+                        .show();
             }
         });
         content.addView(toggle, new LinearLayout.LayoutParams(-1, -2));
@@ -350,6 +361,7 @@ public class FerrumSettingsActivity extends BaseFragment {
                 .setSingleChoiceItems(packs, ModConfig.getColorPack(), (dialog, which) -> {
                     ModConfig.setColorPack(which);
                     ModTheme.applyLive();
+                    if (legacyColorPreview != null) legacyColorPreview.setPack(which);
                     dialog.dismiss();
                     Toast.makeText(context, "Палитра применена", Toast.LENGTH_SHORT).show();
                 })
