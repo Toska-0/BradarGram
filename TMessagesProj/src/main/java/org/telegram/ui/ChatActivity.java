@@ -2896,6 +2896,7 @@ public class ChatActivity extends BaseFragment implements
             .add(NotificationCenter.loadingMessagesFailed)
             .add(NotificationCenter.didUpdateConnectionState)
             .add(NotificationCenter.updateInterfaces)
+            .add(NotificationCenter.modDeletedMessagesUpdated)
             .add(NotificationCenter.updateDefaultSendAsPeer)
             .add(NotificationCenter.userIsPremiumBlockedUpadted)
             .add(NotificationCenter.didLoadSendAsPeers)
@@ -22725,6 +22726,8 @@ public class ChatActivity extends BaseFragment implements
             if (chatActivityEnterView != null) {
                 chatActivityEnterView.updateSendButtonPaid();
             }
+        } else if (id == NotificationCenter.modDeletedMessagesUpdated) {
+            updateVisibleRows();
         } else if (id == NotificationCenter.updateInterfaces) {
             int updateMask = (Integer) args[0];
             if ((updateMask & MessagesController.UPDATE_MASK_NAME) != 0 || (updateMask & MessagesController.UPDATE_MASK_CHAT_NAME) != 0 || (updateMask & MessagesController.UPDATE_MASK_EMOJI_STATUS) != 0) {
