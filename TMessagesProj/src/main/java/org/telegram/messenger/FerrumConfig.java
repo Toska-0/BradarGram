@@ -30,7 +30,7 @@ public final class FerrumConfig {
     private static final String KEY_ANTIVIRUS_ENABLED = "antivirus_enabled";
     private static final String KEY_ANTIVIRUS_ENGINE = "antivirus_engine";
     private static final String KEY_AI_PROVIDER = "antivirus_ai_provider";
-    private static final String KEY_AI_API_KEY = "antivirus_ai_api_key_enc";
+    private static final String KEY_AI_API_KEY = "antivirus_ai_api_key_";
     private static final String KEY_VT_API_KEY = "antivirus_vt_api_key_enc";
     private static final String KEYSTORE_ALIAS = "FerrumApiKeys";
 
@@ -181,11 +181,11 @@ public final class FerrumConfig {
     }
 
     public static void setAiApiKey(Context context, String value) throws Exception {
-        storeSecret(context, KEY_AI_API_KEY, value);
+        storeSecret(context, KEY_AI_API_KEY + getAiProvider(context).toLowerCase(java.util.Locale.US), value);
     }
 
     public static String getAiApiKey(Context context) {
-        return readSecret(context, KEY_AI_API_KEY);
+        return readSecret(context, KEY_AI_API_KEY + getAiProvider(context).toLowerCase(java.util.Locale.US));
     }
 
     public static void setVirusTotalApiKey(Context context, String value) throws Exception {
