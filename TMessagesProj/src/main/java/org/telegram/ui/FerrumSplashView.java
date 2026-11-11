@@ -54,7 +54,6 @@ public final class FerrumSplashView extends View {
 
         wordmarkPaint.setColor(0xFFB9BABE);
         wordmarkPaint.setTextAlign(Paint.Align.CENTER);
-        wordmarkPaint.setLetterSpacingCompat();
     }
 
     @Override
