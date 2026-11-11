@@ -724,7 +724,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
 
         items.add(UItem.asCustomShadow(topView, 200 - 12));
-        items.add(SettingCell.Factory.of(29, 0xFF6E9BFF, 0xFF56C6A9, R.drawable.settings_account, "Ferrum", "Настройки и дополнительные возможности"));
+        items.add(SettingCell.Factory.of(29, 0xFF6E9BFF, 0xFF56C6A9, R.drawable.settings_account, getString(R.string.FerrumSettingsEntry), getString(R.string.FerrumSettingsEntryInfo)));
         items.add(UItem.asShadow(null));
 
         accountNumbers.clear();

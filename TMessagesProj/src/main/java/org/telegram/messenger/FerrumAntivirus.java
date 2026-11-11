@@ -49,7 +49,7 @@ public final class FerrumAntivirus {
         }
 
         public String riskLabel() {
-            return risk == RISK_HIGH ? "Высокий" : risk == RISK_MEDIUM ? "Повышенный" : "Низкий";
+            return risk == RISK_HIGH ? LocaleController.getString(R.string.FerrumRiskHigh) : risk == RISK_MEDIUM ? LocaleController.getString(R.string.FerrumRiskMedium) : LocaleController.getString(R.string.FerrumRiskLow);
         }
     }
 
