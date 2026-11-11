@@ -130,12 +130,14 @@ public class FerrumSettingsActivity extends BaseFragment {
 
         header("БЕЗОПАСНОСТЬ");
         check(40, "Показывать пункт проверки файлов", FerrumConfig.isAntivirusEnabled(c));
+        if (FerrumConfig.isAntivirusEnabled(c)) {
         value(AV_ENGINE, "Движок анализа", FerrumConfig.getAntivirusEngine(c) == FerrumConfig.ANTIVIRUS_ENGINE_VIRUSTOTAL ? "VirusTotal" : "AI-анализ");
         value(AI_PROVIDER, "AI-провайдер", FerrumConfig.getAiProvider(c));
         value(AI_KEY, "API-ключ AI", masked(FerrumConfig.getAiApiKey(c)));
         value(VT_KEY, "API-ключ VirusTotal", masked(FerrumConfig.getVirusTotalApiKey(c)));
         value(SCAN, "Проверить файл", "Выбрать файл");
         info("Сетевые запросы к AI и VirusTotal пока не подключены. Доступен локальный эвристический анализ.");
+        }
 
         header("ПРИВАТНОСТЬ И СООБЩЕНИЯ");
         check(NO_TYPING, "Не отправлять статус «печатает…»", ModConfig.get(ModConfig.KEY_NO_TYPING));
@@ -304,6 +306,7 @@ public class FerrumSettingsActivity extends BaseFragment {
     public void onActivityResultFragment(int requestCode,int resultCode,Intent data) {
         if(resultCode!=Activity.RESULT_OK||data==null||data.getData()==null)return;
         Uri uri=data.getData(); Context c=getParentActivity();
+        if (c == null) return;
         try {
             if(requestCode==REQUEST_EXPORT){
                 String json=FerrumConfig.exportPortableSettings(c);
@@ -312,12 +315,12 @@ public class FerrumSettingsActivity extends BaseFragment {
             } else if(requestCode==REQUEST_IMPORT){
                 StringBuilder json=new StringBuilder();
                 try(InputStream in=c.getContentResolver().openInputStream(uri)){if(in==null)throw new IllegalStateException("Не удалось открыть файл");byte[] buf=new byte[4096];int n;while((n=in.read(buf))!=-1){if(json.length()+n>128*1024)throw new IllegalArgumentException("Файл слишком большой");json.append(new String(buf,0,n,StandardCharsets.UTF_8));}}
-                FerrumConfig.importPortableSettings(c,json.toString()); FerrumConfig.applyAccentTheme(c);
+                FerrumConfig.importPortableSettings(c,json.toString()); FerrumConfig.applyAccentTheme(c); ModTheme.applyLive();
                 Toast.makeText(c,"Настройки импортированы",Toast.LENGTH_LONG).show(); refresh();
             } else if(requestCode==REQUEST_BANNER){
                 c.getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION); FerrumConfig.setProfileBannerUri(c,uri.toString()); refresh();
             } else if(requestCode==REQUEST_SCAN){
-                FerrumAntivirus.scan(c,uri,result->{StringBuilder msg=new StringBuilder();msg.append("Файл: ").append(result.fileName).append("\nРазмер: ").append(result.size).append(" байт\nSHA-256: ").append(result.sha256).append("\nУровень риска: ").append(result.riskLabel());for(String finding:result.findings)msg.append("\n• ").append(finding);new AlertDialog.Builder(getParentActivity()).setTitle("Результат проверки").setMessage(msg.toString()).setPositiveButton("Закрыть",null).show();});
+                FerrumAntivirus.scan(c,uri,result->{android.app.Activity activity=getParentActivity();if(activity==null)return;StringBuilder msg=new StringBuilder();msg.append("Файл: ").append(result.fileName).append("\nРазмер: ").append(result.size).append(" байт\nSHA-256: ").append(result.sha256).append("\nУровень риска: ").append(result.riskLabel());for(String finding:result.findings)msg.append("\n• ").append(finding);new AlertDialog.Builder(activity).setTitle("Результат проверки").setMessage(msg.toString()).setPositiveButton("Закрыть",null).show();});
             }
         } catch(Exception e){Toast.makeText(c,"Ошибка: "+e.getMessage(),Toast.LENGTH_LONG).show();}
     }

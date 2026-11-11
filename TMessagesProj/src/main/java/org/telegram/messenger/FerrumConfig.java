@@ -261,6 +261,8 @@ public final class FerrumConfig {
         json.put("avatarRingWidth", getAvatarRingWidth(context));
         json.put("avatarRingStyle", getAvatarRingStyle(context));
         json.put("antivirusEnabled", isAntivirusEnabled(context));
+        json.put("antivirusEngine", getAntivirusEngine(context));
+        json.put("aiProvider", getAiProvider(context));
         return json.toString(2);
     }
 
@@ -282,6 +284,10 @@ public final class FerrumConfig {
         if (style < AVATAR_RING_STYLE_SOLID || style > AVATAR_RING_STYLE_DASHED) style = AVATAR_RING_STYLE_SOLID;
         edit.putInt(KEY_AVATAR_RING_STYLE, style);
         edit.putBoolean(KEY_ANTIVIRUS_ENABLED, json.optBoolean("antivirusEnabled", false));
+        int engine = json.optInt("antivirusEngine", ANTIVIRUS_ENGINE_AI);
+        edit.putInt(KEY_ANTIVIRUS_ENGINE, engine == ANTIVIRUS_ENGINE_VIRUSTOTAL ? ANTIVIRUS_ENGINE_VIRUSTOTAL : ANTIVIRUS_ENGINE_AI);
+        String provider = json.optString("aiProvider", "Gemini");
+        edit.putString(KEY_AI_PROVIDER, "Gemini".equals(provider) || "Claude".equals(provider) || "ChatGPT".equals(provider) ? provider : "Gemini");
         edit.apply();
     }
 
