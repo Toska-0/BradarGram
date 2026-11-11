@@ -28,6 +28,11 @@ public final class FerrumConfig {
     private static final String KEY_AVATAR_RING_WIDTH = "avatar_ring_width";
     private static final String KEY_AVATAR_RING_STYLE = "avatar_ring_style";
     private static final String KEY_ANTIVIRUS_ENABLED = "antivirus_enabled";
+    private static final String KEY_ANTIVIRUS_ENGINE = "antivirus_engine";
+    private static final String KEY_AI_PROVIDER = "antivirus_ai_provider";
+    private static final String KEY_AI_API_KEY = "antivirus_ai_api_key_enc";
+    private static final String KEY_VT_API_KEY = "antivirus_vt_api_key_enc";
+    private static final String KEYSTORE_ALIAS = "FerrumApiKeys";
 
     public static final int DEFAULT_ACCENT_COLOR = 0xFF7C9BFF;
     public static final int DEFAULT_AVATAR_RING_COLOR = 0xFF7C9BFF;
@@ -148,6 +153,98 @@ public final class FerrumConfig {
 
     public static void setAntivirusEnabled(Context context, boolean enabled) {
         prefs(context).edit().putBoolean(KEY_ANTIVIRUS_ENABLED, enabled).apply();
+    }
+
+    public static final int ANTIVIRUS_ENGINE_AI = 0;
+    public static final int ANTIVIRUS_ENGINE_VIRUSTOTAL = 1;
+
+    public static int getAntivirusEngine(Context context) {
+        int engine = prefs(context).getInt(KEY_ANTIVIRUS_ENGINE, ANTIVIRUS_ENGINE_AI);
+        return engine == ANTIVIRUS_ENGINE_VIRUSTOTAL ? engine : ANTIVIRUS_ENGINE_AI;
+    }
+
+    public static void setAntivirusEngine(Context context, int engine) {
+        if (engine != ANTIVIRUS_ENGINE_VIRUSTOTAL) engine = ANTIVIRUS_ENGINE_AI;
+        prefs(context).edit().putInt(KEY_ANTIVIRUS_ENGINE, engine).apply();
+    }
+
+    public static String getAiProvider(Context context) {
+        String provider = prefs(context).getString(KEY_AI_PROVIDER, "Gemini");
+        return "Claude".equals(provider) || "ChatGPT".equals(provider) ? provider : "Gemini";
+    }
+
+    public static void setAiProvider(Context context, String provider) {
+        if (!"Gemini".equals(provider) && !"Claude".equals(provider) && !"ChatGPT".equals(provider)) {
+            provider = "Gemini";
+        }
+        prefs(context).edit().putString(KEY_AI_PROVIDER, provider).apply();
+    }
+
+    public static void setAiApiKey(Context context, String value) throws Exception {
+        storeSecret(context, KEY_AI_API_KEY, value);
+    }
+
+    public static String getAiApiKey(Context context) {
+        return readSecret(context, KEY_AI_API_KEY);
+    }
+
+    public static void setVirusTotalApiKey(Context context, String value) throws Exception {
+        storeSecret(context, KEY_VT_API_KEY, value);
+    }
+
+    public static String getVirusTotalApiKey(Context context) {
+        return readSecret(context, KEY_VT_API_KEY);
+    }
+
+    private static void storeSecret(Context context, String preferenceKey, String value) throws Exception {
+        if (value == null || value.trim().isEmpty()) {
+            prefs(context).edit().remove(preferenceKey).apply();
+            return;
+        }
+        javax.crypto.SecretKey secretKey = getOrCreateSecretKey();
+        javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, secretKey);
+        byte[] encrypted = cipher.doFinal(value.trim().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        byte[] iv = cipher.getIV();
+        byte[] combined = new byte[iv.length + encrypted.length];
+        System.arraycopy(iv, 0, combined, 0, iv.length);
+        System.arraycopy(encrypted, 0, combined, iv.length, encrypted.length);
+        String encoded = android.util.Base64.encodeToString(combined, android.util.Base64.NO_WRAP);
+        prefs(context).edit().putString(preferenceKey, encoded).apply();
+    }
+
+    private static String readSecret(Context context, String preferenceKey) {
+        String encoded = prefs(context).getString(preferenceKey, null);
+        if (encoded == null || encoded.isEmpty()) return "";
+        try {
+            byte[] combined = android.util.Base64.decode(encoded, android.util.Base64.NO_WRAP);
+            if (combined.length <= 12) return "";
+            byte[] iv = java.util.Arrays.copyOfRange(combined, 0, 12);
+            byte[] encrypted = java.util.Arrays.copyOfRange(combined, 12, combined.length);
+            javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, getOrCreateSecretKey(), new javax.crypto.spec.GCMParameterSpec(128, iv));
+            return new String(cipher.doFinal(encrypted), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private static javax.crypto.SecretKey getOrCreateSecretKey() throws Exception {
+        java.security.KeyStore keyStore = java.security.KeyStore.getInstance("AndroidKeyStore");
+        keyStore.load(null);
+        java.security.Key existing = keyStore.getKey(KEYSTORE_ALIAS, null);
+        if (existing instanceof javax.crypto.SecretKey) return (javax.crypto.SecretKey) existing;
+        javax.crypto.KeyGenerator generator = javax.crypto.KeyGenerator.getInstance(
+                android.security.keystore.KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+        android.security.keystore.KeyGenParameterSpec spec = new android.security.keystore.KeyGenParameterSpec.Builder(
+                KEYSTORE_ALIAS,
+                android.security.keystore.KeyProperties.PURPOSE_ENCRYPT | android.security.keystore.KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(android.security.keystore.KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setRandomizedEncryptionRequired(true)
+                .build();
+        generator.init(spec);
+        return generator.generateKey();
     }
 
     /** Exports portable preferences. Image URI is intentionally excluded because it is device-local. */
