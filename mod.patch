@@ -1,6 +1,6 @@
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java b/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
---- a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java	2026-11-11 05:34:32.566750274 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java	2026-11-11 05:34:32.521371885 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java	2026-11-11 08:05:51.491616575 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java	2026-11-11 08:05:51.285615869 +0000
 @@ -26,8 +26,8 @@
      public static boolean NO_SCOPED_STORAGE = Build.VERSION.SDK_INT <= 29;
      public static String BUILD_VERSION_STRING = BuildConfig.BUILD_VERSION_STRING;
@@ -12,9 +12,22 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java b/
  
      // SafetyNet key for Google Identity SDK, set it to empty to disable
      public static String SAFETYNET_KEY = "AIzaSyDqt8P-7F7CPCseMkOiVRgb1LY8RN1bvH8";
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/LiteMode.java b/TMessagesProj/src/main/java/org/telegram/messenger/LiteMode.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/LiteMode.java	2026-11-11 08:05:51.497689492 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/LiteMode.java	2026-11-11 08:05:51.496050616 +0000
+@@ -205,6 +205,9 @@
+     }
+ 
+     public static boolean isEnabled(int flag) {
++        if (ModConfig.isNoBlur() && (flag & (FLAG_CHAT_BLUR | FLAG_LIQUID_GLASS)) != 0) {
++            return false;
++        }
+         if (flag == FLAG_CHAT_FORUM_TWOCOLUMN && AndroidUtilities.isTablet()) {
+             // always enabled for tablets
+             return true;
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
---- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 05:34:32.406750264 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 05:34:31.957492608 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 08:05:51.187616557 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 08:05:50.918882459 +0000
 @@ -11412,6 +11412,9 @@
      }
  
@@ -59,8 +72,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesControlle
          LongSparseArray<ArrayList<Integer>> scheduledDeletedMessagesFinal = scheduledDeletedMessages;
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java
 --- a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java	1970-01-01 00:00:00.000000000 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java	2026-11-11 05:34:32.415549765 +0000
-@@ -0,0 +1,127 @@
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java	2026-11-11 08:05:51.196468771 +0000
+@@ -0,0 +1,109 @@
 +package org.telegram.messenger;
 +
 +import android.content.Context;
@@ -69,11 +82,7 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/
 +/** Настройки мода. Хранятся в отдельном SharedPreferences-файле "modconfig". */
 +public class ModConfig {
 +
-+    public static final String MOD_VERSION = "1.1";
-+
-+    public static final int STYLE_DEFAULT = 0;
-+    public static final int STYLE_MATERIAL3 = 1;
-+    public static final int STYLE_GLASS = 2;
++    public static final String MOD_VERSION = "1.2";
 +
 +    private static final String PREFS = "modconfig";
 +
@@ -84,7 +93,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/
 +    public static final String KEY_LOCAL_PREMIUM = "local_premium";
 +    public static final String KEY_SAVE_DELETED = "save_deleted";
 +    public static final String KEY_NO_READ = "no_read_receipts";
-+    private static final String KEY_STYLE = "ui_style";
++    public static final String KEY_NO_BLUR = "no_blur";
++    private static final String KEY_COLOR_PACK = "color_pack";
 +
 +    private static volatile boolean loaded;
 +    private static volatile boolean noTyping;
@@ -94,7 +104,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/
 +    private static volatile boolean localPremium;
 +    private static volatile boolean saveDeleted;
 +    private static volatile boolean noRead;
-+    private static volatile int style;
++    private static volatile boolean noBlur;
++    private static volatile int colorPack;
 +
 +    private static SharedPreferences prefs() {
 +        return ApplicationLoader.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
@@ -112,7 +123,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/
 +        localPremium = p.getBoolean(KEY_LOCAL_PREMIUM, false);
 +        saveDeleted = p.getBoolean(KEY_SAVE_DELETED, false);
 +        noRead = p.getBoolean(KEY_NO_READ, false);
-+        style = p.getInt(KEY_STYLE, STYLE_DEFAULT);
++        noBlur = p.getBoolean(KEY_NO_BLUR, false);
++        colorPack = p.getInt(KEY_COLOR_PACK, 0);
 +        loaded = true;
 +    }
 +
@@ -126,6 +138,7 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/
 +            case KEY_LOCAL_PREMIUM: return localPremium;
 +            case KEY_SAVE_DELETED: return saveDeleted;
 +            case KEY_NO_READ: return noRead;
++            case KEY_NO_BLUR: return noBlur;
 +        }
 +        return false;
 +    }
@@ -141,41 +154,23 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/
 +            case KEY_LOCAL_PREMIUM: localPremium = value; break;
 +            case KEY_SAVE_DELETED: saveDeleted = value; break;
 +            case KEY_NO_READ: noRead = value; break;
++            case KEY_NO_BLUR: noBlur = value; break;
 +            default: return false;
 +        }
 +        prefs().edit().putBoolean(key, value).apply();
 +        return value;
 +    }
 +
-+    public static int getStyle() {
++    /** 0 - стандартные цвета, 1.. - цветовые пакеты из {@link ModTheme}. */
++    public static int getColorPack() {
 +        load();
-+        return style;
++        return colorPack;
 +    }
 +
-+    /**
-+     * Переключает стиль интерфейса. Liquid Glass включается через штатные флаги LiteMode
-+     * (прежнее состояние флагов запоминается и возвращается при выходе из стиля).
-+     * Material 3 включает палитру Material You (Android 12+), см. {@link ModTheme}.
-+     */
-+    public static void applyStyle(int newStyle) {
++    public static void setColorPack(int pack) {
 +        load();
-+        int old = style;
-+        if (old == newStyle) {
-+            return;
-+        }
-+        SharedPreferences.Editor e = prefs().edit();
-+        if (newStyle == STYLE_GLASS && old != STYLE_GLASS) {
-+            e.putBoolean("glass_prev", LiteMode.isEnabledSetting(LiteMode.FLAG_LIQUID_GLASS));
-+            e.putBoolean("blur_prev", LiteMode.isEnabledSetting(LiteMode.FLAG_CHAT_BLUR));
-+            LiteMode.toggleFlag(LiteMode.FLAG_LIQUID_GLASS, true);
-+            LiteMode.toggleFlag(LiteMode.FLAG_CHAT_BLUR, true);
-+        } else if (old == STYLE_GLASS && newStyle != STYLE_GLASS) {
-+            SharedPreferences p = prefs();
-+            LiteMode.toggleFlag(LiteMode.FLAG_LIQUID_GLASS, p.getBoolean("glass_prev", false));
-+            LiteMode.toggleFlag(LiteMode.FLAG_CHAT_BLUR, p.getBoolean("blur_prev", false));
-+        }
-+        e.putInt(KEY_STYLE, newStyle).apply();
-+        style = newStyle;
++        colorPack = pack;
++        prefs().edit().putInt(KEY_COLOR_PACK, pack).apply();
 +        ModTheme.invalidate();
 +    }
 +
@@ -186,11 +181,11 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/
 +    public static boolean isLocalPremium() { load(); return localPremium; }
 +    public static boolean isSaveDeleted() { load(); return saveDeleted; }
 +    public static boolean isNoRead() { load(); return noRead; }
-+    public static boolean isMaterial3() { load(); return style == STYLE_MATERIAL3; }
++    public static boolean isNoBlur() { load(); return noBlur; }
 +}
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModDeletedMessages.java b/TMessagesProj/src/main/java/org/telegram/messenger/ModDeletedMessages.java
 --- a/TMessagesProj/src/main/java/org/telegram/messenger/ModDeletedMessages.java	1970-01-01 00:00:00.000000000 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModDeletedMessages.java	2026-11-11 05:34:32.422470760 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModDeletedMessages.java	2026-11-11 08:05:51.204240309 +0000
 @@ -0,0 +1,86 @@
 +package org.telegram.messenger;
 +
@@ -280,88 +275,147 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModDeletedMessage
 +}
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModTheme.java b/TMessagesProj/src/main/java/org/telegram/messenger/ModTheme.java
 --- a/TMessagesProj/src/main/java/org/telegram/messenger/ModTheme.java	1970-01-01 00:00:00.000000000 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModTheme.java	2026-11-11 05:34:32.418983746 +0000
-@@ -0,0 +1,77 @@
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModTheme.java	2026-11-11 08:05:51.200701346 +0000
+@@ -0,0 +1,136 @@
 +package org.telegram.messenger;
 +
-+import android.content.Context;
-+import android.os.Build;
 +import android.util.SparseIntArray;
 +
 +import org.telegram.ui.ActionBar.Theme;
 +
 +/**
-+ * Стиль «Material 3»: подменяет ключевые цвета темы цветами системной палитры Material You
-+ * (Android 12+). Тона соответствуют ролям M3: primary, primaryContainer, surface и т.д.
++ * Цветовые пакеты интерфейса. Спокойные пастельные палитры, у каждой своя светлая и тёмная версия.
++ * Пакет подменяет ключевые цвета темы в {@link Theme#getColor(int, boolean[], boolean)}.
 + */
 +public class ModTheme {
 +
-+    private static SparseIntArray light;
-+    private static SparseIntArray dark;
++    // роли цветов в массиве пакета
++    public static final int PRIMARY = 0;
++    public static final int CONTAINER = 1;
++    public static final int CONTAINER_HI = 2;
++    public static final int ON_CONTAINER = 3;
++    public static final int ON_CONTAINER_VAR = 4;
++    public static final int SURFACE = 5;
++    public static final int SURFACE_DIM = 6;
++    public static final int ON_PRIMARY = 7;
++
++    /** Названия пакетов (индекс 0 - стандартные цвета). */
++    public static final int[] PACK_NAMES = {
++            R.string.ModPackDefault,
++            R.string.ModPackSky,
++            R.string.ModPackPink,
++            R.string.ModPackMint,
++            R.string.ModPackLavender,
++            R.string.ModPackPeach,
++            R.string.ModPackGraphite
++    };
++
++    // P, C, CH, OC, OCV, S, SD, OP
++    private static final int[][] LIGHT = {
++            null,
++            {0xFF3A86C8, 0xFFD9EAF8, 0xFFC6DFF3, 0xFF0E2D4A, 0xFF2C5F8C, 0xFFFFFFFF, 0xFFEDF3F9, 0xFFFFFFFF}, // голубой
++            {0xFFC95F86, 0xFFF9DDE7, 0xFFF3CCDA, 0xFF4A1328, 0xFF8C3957, 0xFFFFFFFF, 0xFFFAEFF3, 0xFFFFFFFF}, // розовый
++            {0xFF35967F, 0xFFD6F0E7, 0xFFC3E6DA, 0xFF0C3A2D, 0xFF2F6E5C, 0xFFFFFFFF, 0xFFEDF7F3, 0xFFFFFFFF}, // мятный
++            {0xFF7F63C4, 0xFFE6DEF7, 0xFFD9CEF1, 0xFF2A1B52, 0xFF5B459A, 0xFFFFFFFF, 0xFFF3F0FA, 0xFFFFFFFF}, // сиреневый
++            {0xFFD9804F, 0xFFFBE2D4, 0xFFF6D3C0, 0xFF47220F, 0xFF8A4B26, 0xFFFFFFFF, 0xFFFBF2EC, 0xFFFFFFFF}, // персиковый
++            {0xFF566E7F, 0xFFDDE5EB, 0xFFCDD8E0, 0xFF1A2935, 0xFF45596A, 0xFFFFFFFF, 0xFFF0F3F5, 0xFFFFFFFF}  // графит
++    };
++    private static final int[][] DARK = {
++            null,
++            {0xFF8CC0EE, 0xFF1F4466, 0xFF29547B, 0xFFDCEBFA, 0xFFA9CCEA, 0xFF17212B, 0xFF0F1720, 0xFF0B2740},
++            {0xFFEFA5BE, 0xFF5C2A40, 0xFF70374F, 0xFFFBE2EB, 0xFFE8B4C6, 0xFF231820, 0xFF1A1017, 0xFF4A1328},
++            {0xFF86D0B8, 0xFF1D4A3E, 0xFF285C4E, 0xFFD9F4EA, 0xFFA4D8C7, 0xFF151F1C, 0xFF0E1614, 0xFF0B3328},
++            {0xFFBBA8F0, 0xFF45346F, 0xFF56438A, 0xFFEBE4FC, 0xFFCBBEF1, 0xFF1D1829, 0xFF15111E, 0xFF2A1B52},
++            {0xFFF1B08A, 0xFF5B3421, 0xFF70432C, 0xFFFCE8DB, 0xFFEEC3A9, 0xFF241A14, 0xFF1A120D, 0xFF47220F},
++            {0xFFA3B8C8, 0xFF2E3D49, 0xFF3B4D5B, 0xFFE0E9EF, 0xFFB6C6D2, 0xFF1B2227, 0xFF12171A, 0xFF1A2935}
++    };
++
++    private static final SparseIntArray[] lightMaps = new SparseIntArray[LIGHT.length];
++    private static final SparseIntArray[] darkMaps = new SparseIntArray[DARK.length];
 +
 +    public static synchronized void invalidate() {
-+        light = null;
-+        dark = null;
++        for (int i = 0; i < lightMaps.length; i++) {
++            lightMaps[i] = null;
++            darkMaps[i] = null;
++        }
++    }
++
++    /** Копия цветов пакета (см. роли выше) или null для стандартных цветов. */
++    public static int[] colors(int pack, boolean isDark) {
++        int[][] src = isDark ? DARK : LIGHT;
++        if (pack <= 0 || pack >= src.length || src[pack] == null) {
++            return null;
++        }
++        return src[pack].clone();
 +    }
 +
 +    /** @return цвет или 0, если ключ не переопределяется. */
 +    public static int getColor(int key, boolean isDark) {
-+        if (Build.VERSION.SDK_INT < 31) {
++        int pack = ModConfig.getColorPack();
++        if (pack <= 0 || pack >= LIGHT.length) {
 +            return 0;
 +        }
-+        SparseIntArray map = isDark ? dark : light;
++        SparseIntArray map = isDark ? darkMaps[pack] : lightMaps[pack];
 +        if (map == null) {
-+            map = build(isDark);
++            map = build(pack, isDark);
 +        }
 +        return map.get(key, 0);
 +    }
 +
-+    private static synchronized SparseIntArray build(boolean isDark) {
++    private static synchronized SparseIntArray build(int pack, boolean isDark) {
++        int[] c = (isDark ? DARK : LIGHT)[pack];
 +        SparseIntArray map = new SparseIntArray();
-+        try {
-+            Context c = ApplicationLoader.applicationContext;
-+            // роли M3
-+            int primary = isDark ? c.getColor(android.R.color.system_accent1_200) : c.getColor(android.R.color.system_accent1_600);
-+            int container = isDark ? c.getColor(android.R.color.system_accent1_700) : c.getColor(android.R.color.system_accent1_100);
-+            int containerHi = isDark ? c.getColor(android.R.color.system_accent1_600) : c.getColor(android.R.color.system_accent1_200);
-+            int onContainer = isDark ? c.getColor(android.R.color.system_accent1_100) : c.getColor(android.R.color.system_accent1_900);
-+            int onContainerVar = isDark ? c.getColor(android.R.color.system_accent1_200) : c.getColor(android.R.color.system_accent1_700);
-+            int surface = isDark ? c.getColor(android.R.color.system_neutral1_900) : c.getColor(android.R.color.system_neutral1_10);
-+            int surfaceDim = isDark ? c.getColor(android.R.color.system_neutral1_1000) : c.getColor(android.R.color.system_neutral1_50);
 +
-+            map.put(Theme.key_chats_actionBackground, container);
-+            map.put(Theme.key_chats_actionPressedBackground, containerHi);
-+            map.put(Theme.key_chats_actionIcon, onContainer);
++        map.put(Theme.key_chats_actionBackground, c[PRIMARY]);
++        map.put(Theme.key_chats_actionPressedBackground, c[ON_CONTAINER_VAR]);
++        map.put(Theme.key_chats_actionIcon, c[ON_PRIMARY]);
 +
-+            map.put(Theme.key_windowBackgroundWhiteBlueText, primary);
-+            map.put(Theme.key_windowBackgroundWhiteBlueHeader, primary);
-+            map.put(Theme.key_dialogTextBlue, primary);
-+            map.put(Theme.key_dialogButton, primary);
-+            map.put(Theme.key_switchTrackChecked, primary);
-+            map.put(Theme.key_switch2TrackChecked, primary);
++        map.put(Theme.key_windowBackgroundWhiteBlueText, c[PRIMARY]);
++        map.put(Theme.key_windowBackgroundWhiteBlueHeader, c[PRIMARY]);
++        map.put(Theme.key_windowBackgroundWhiteLinkText, c[PRIMARY]);
++        map.put(Theme.key_dialogTextBlue, c[PRIMARY]);
++        map.put(Theme.key_dialogButton, c[PRIMARY]);
++        map.put(Theme.key_switchTrackChecked, c[PRIMARY]);
++        map.put(Theme.key_switch2TrackChecked, c[PRIMARY]);
++        map.put(Theme.key_chats_unreadCounter, c[PRIMARY]);
++        map.put(Theme.key_chats_unreadCounterText, c[ON_PRIMARY]);
 +
-+            map.put(Theme.key_chat_outBubble, container);
-+            map.put(Theme.key_chat_outBubbleSelected, containerHi);
-+            map.put(Theme.key_chat_messageTextOut, onContainer);
-+            map.put(Theme.key_chat_outTimeText, onContainerVar);
-+            map.put(Theme.key_chat_messageLinkOut, onContainerVar);
++        map.put(Theme.key_chat_outBubble, c[CONTAINER]);
++        map.put(Theme.key_chat_outBubbleGradient1, c[CONTAINER]);
++        map.put(Theme.key_chat_outBubbleGradient2, c[CONTAINER]);
++        map.put(Theme.key_chat_outBubbleGradient3, c[CONTAINER]);
++        map.put(Theme.key_chat_outBubbleSelected, c[CONTAINER_HI]);
++        map.put(Theme.key_chat_messageTextOut, c[ON_CONTAINER]);
++        map.put(Theme.key_chat_outTimeText, c[ON_CONTAINER_VAR]);
++        map.put(Theme.key_chat_messageLinkOut, c[ON_CONTAINER_VAR]);
 +
-+            map.put(Theme.key_windowBackgroundWhite, surface);
-+            map.put(Theme.key_windowBackgroundGray, surfaceDim);
-+        } catch (Throwable t) {
-+            FileLog.e(t);
-+        }
++        map.put(Theme.key_windowBackgroundWhite, c[SURFACE]);
++        map.put(Theme.key_windowBackgroundGray, c[SURFACE_DIM]);
++
 +        if (isDark) {
-+            dark = map;
++            darkMaps[pack] = map;
 +        } else {
-+            light = map;
++            lightMaps[pack] = map;
 +        }
 +        return map;
++    }
++
++    /** Применяет цвета сразу: Telegram перекрашивает весь интерфейс тем же уведомлением, что и смена темы. */
++    public static void applyLive() {
++        invalidate();
++        AndroidUtilities.runOnUIThread(() -> {
++            try {
++                NotificationCenter.getGlobalInstance().postNotificationName(
++                        NotificationCenter.needSetDayNightTheme, Theme.getActiveTheme(), false, null, -1);
++            } catch (Throwable t) {
++                FileLog.e(t);
++            }
++        });
 +    }
 +}
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModUtils.java b/TMessagesProj/src/main/java/org/telegram/messenger/ModUtils.java
 --- a/TMessagesProj/src/main/java/org/telegram/messenger/ModUtils.java	1970-01-01 00:00:00.000000000 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModUtils.java	2026-11-11 05:34:32.425844771 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModUtils.java	2026-11-11 08:05:51.208735229 +0000
 @@ -0,0 +1,28 @@
 +package org.telegram.messenger;
 +
@@ -392,8 +446,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModUtils.java b/T
 +    }
 +}
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/NotificationCenter.java b/TMessagesProj/src/main/java/org/telegram/messenger/NotificationCenter.java
---- a/TMessagesProj/src/main/java/org/telegram/messenger/NotificationCenter.java	2026-11-11 05:34:32.510750271 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/messenger/NotificationCenter.java	2026-11-11 05:34:32.429408283 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/NotificationCenter.java	2026-11-11 08:05:51.271616562 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/NotificationCenter.java	2026-11-11 08:05:51.213823430 +0000
 @@ -385,6 +385,7 @@
      public static final int webBrowserSettingsUpdate = totalEvents++;
      public static final int communityPendingRequestsUpdate = totalEvents++;
@@ -403,8 +457,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/NotificationCente
      public static boolean alreadyLogged;
  
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java b/TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java
---- a/TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java	2026-11-11 05:34:32.517769213 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java	2026-11-11 05:34:32.515704093 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java	2026-11-11 08:05:51.279616563 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java	2026-11-11 08:05:51.279199043 +0000
 @@ -577,6 +577,9 @@
          if (user == null) {
              return false;
@@ -416,13 +470,13 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java b
      }
  
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java b/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java
---- a/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java	2026-11-11 05:34:33.294750317 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java	2026-11-11 05:34:33.231553288 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java	2026-11-11 08:05:52.135616614 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java	2026-11-11 08:05:52.088436214 +0000
 @@ -9123,6 +9123,12 @@
      }
  
      public static int getColor(int key, boolean[] isDefault, boolean ignoreAnimation) {
-+        if (org.telegram.messenger.ModConfig.isMaterial3()) {
++        if (org.telegram.messenger.ModConfig.getColorPack() > 0) {
 +            final int modColor = org.telegram.messenger.ModTheme.getColor(key, isCurrentThemeDark());
 +            if (modColor != 0) {
 +                return modColor;
@@ -432,8 +486,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java b/T
              // compact mode swaps some message colors for its own keys, see getCompactColor
              final Integer compactColor = getCompactColor(key, null);
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java b/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java
---- a/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java	2026-11-11 05:34:33.222750313 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java	2026-11-11 05:34:33.103663453 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java	2026-11-11 08:05:52.079616610 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java	2026-11-11 08:05:51.949097173 +0000
 @@ -15664,6 +15664,9 @@
                  currentTimeString = TextUtils.concat(formatString(R.string.MessageScheduledRepeatSeconds, period), ", ", currentTimeString);
              }
@@ -445,8 +499,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.ja
          if (currentMessageObject.scheduled && currentMessageObject.messageOwner.date == 0x7FFFFFFE || currentMessageObject.notime) {
              timeWidth -= dp(8);
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
---- a/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java	2026-11-11 05:34:33.094750305 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java	2026-11-11 05:34:33.036079943 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java	2026-11-11 08:05:51.943616602 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java	2026-11-11 08:05:51.812506598 +0000
 @@ -2896,6 +2896,7 @@
              .add(NotificationCenter.loadingMessagesFailed)
              .add(NotificationCenter.didUpdateConnectionState)
@@ -465,8 +519,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java b/TMes
              int updateMask = (Integer) args[0];
              if ((updateMask & MessagesController.UPDATE_MASK_NAME) != 0 || (updateMask & MessagesController.UPDATE_MASK_CHAT_NAME) != 0 || (updateMask & MessagesController.UPDATE_MASK_EMOJI_STATUS) != 0) {
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java b/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java
---- a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 05:34:32.782750287 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 05:34:32.572546811 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 08:05:51.603616582 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 08:05:51.501522423 +0000
 @@ -74,7 +74,25 @@
  
  	private static final int VOIP_SUPPORT_ID = 4244000;
@@ -493,15 +547,315 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelp
  		if (accountInstance == null ? MessagesController.getInstance(UserConfig.selectedAccount).isFrozen() : accountInstance.getMessagesController().isFrozen()) {
  			AccountFrozenAlert.show(accountInstance == null ? UserConfig.selectedAccount : accountInstance.getCurrentAccount());
  			return;
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModBlurPreviewView.java b/TMessagesProj/src/main/java/org/telegram/ui/ModBlurPreviewView.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ModBlurPreviewView.java	1970-01-01 00:00:00.000000000 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ModBlurPreviewView.java	2026-11-11 08:05:51.614566757 +0000
+@@ -0,0 +1,138 @@
++package org.telegram.ui;
++
++import android.content.Context;
++import android.graphics.BlurMaskFilter;
++import android.graphics.Canvas;
++import android.graphics.Paint;
++import android.graphics.Path;
++import android.graphics.RectF;
++import android.view.View;
++
++import org.telegram.messenger.AndroidUtilities;
++import org.telegram.messenger.LocaleController;
++import org.telegram.messenger.R;
++import org.telegram.ui.ActionBar.Theme;
++
++/** Небольшое превью: как выглядит панель с размытием и без него. */
++public class ModBlurPreviewView extends View {
++
++    private boolean blurDisabled;
++
++    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
++    private final Paint blurPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
++    private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
++    private final RectF card = new RectF();
++    private final RectF bar = new RectF();
++    private final RectF tmp = new RectF();
++    private final Path clip = new Path();
++
++    private static final int[] BLOB_COLORS = {0xFFF4A6C0, 0xFF8EC5F2, 0xFF9AD9B8, 0xFFF6C98A};
++    private static final float[][] BLOBS = {
++            {0.16f, 0.62f, 0.17f},
++            {0.42f, 0.78f, 0.22f},
++            {0.70f, 0.66f, 0.18f},
++            {0.90f, 0.80f, 0.15f}
++    };
++
++    public ModBlurPreviewView(Context context) {
++        super(context);
++        // BlurMaskFilter надёжно работает на программном слое, превью маленькое
++        setLayerType(LAYER_TYPE_SOFTWARE, null);
++        blurPaint.setMaskFilter(new BlurMaskFilter(dp(9), BlurMaskFilter.Blur.NORMAL));
++        textPaint.setTextSize(dp(12));
++    }
++
++    private static int dp(float v) {
++        return AndroidUtilities.dp(v);
++    }
++
++    public void setBlurDisabled(boolean disabled) {
++        if (blurDisabled != disabled) {
++            blurDisabled = disabled;
++            invalidate();
++        } else {
++            invalidate();
++        }
++    }
++
++    @Override
++    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
++        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), dp(136));
++    }
++
++    private void drawContent(Canvas canvas, Paint p, boolean dark) {
++        for (int i = 0; i < BLOBS.length; i++) {
++            p.setColor(BLOB_COLORS[i]);
++            canvas.drawCircle(card.left + card.width() * BLOBS[i][0], card.top + card.height() * BLOBS[i][1], card.height() * BLOBS[i][2], p);
++        }
++        p.setColor(dark ? 0xFF7C8A98 : 0xFF9FB0C0);
++        float x = card.left + dp(12);
++        tmp.set(x, card.top + dp(34), x + card.width() * 0.55f, card.top + dp(41));
++        canvas.drawRoundRect(tmp, dp(3.5f), dp(3.5f), p);
++        tmp.set(x, card.top + dp(48), x + card.width() * 0.38f, card.top + dp(55));
++        canvas.drawRoundRect(tmp, dp(3.5f), dp(3.5f), p);
++    }
++
++    @Override
++    protected void onDraw(Canvas canvas) {
++        final boolean dark = Theme.isCurrentThemeDark();
++        final int w = getWidth();
++        final int h = getHeight();
++        final float pad = dp(16);
++        final float r = dp(14);
++
++        card.set(pad, dp(8), w - pad, h - dp(8));
++        canvas.save();
++        clip.reset();
++        clip.addRoundRect(card, r, r, Path.Direction.CW);
++        canvas.clipPath(clip);
++
++        paint.setStyle(Paint.Style.FILL);
++        paint.setColor(dark ? 0xFF1B2430 : 0xFFEAF1F8);
++        canvas.drawRect(card, paint);
++        drawContent(canvas, paint, dark);
++
++        final float barH = dp(40);
++        bar.set(card.left + dp(12), card.bottom - dp(12) - barH, card.right - dp(12), card.bottom - dp(12));
++        final float br = barH / 2f;
++
++        if (!blurDisabled) {
++            canvas.save();
++            Path barClip = new Path();
++            barClip.addRoundRect(bar, br, br, Path.Direction.CW);
++            canvas.clipPath(barClip);
++            drawContent(canvas, blurPaint, dark);
++            paint.setStyle(Paint.Style.FILL);
++            paint.setColor(dark ? 0x99141B24 : 0x99FFFFFF);
++            canvas.drawRoundRect(bar, br, br, paint);
++            canvas.restore();
++            paint.setStyle(Paint.Style.STROKE);
++            paint.setStrokeWidth(dp(1));
++            paint.setColor(dark ? 0x40FFFFFF : 0xB3FFFFFF);
++            canvas.drawRoundRect(bar, br, br, paint);
++        } else {
++            paint.setStyle(Paint.Style.FILL);
++            paint.setColor(dark ? 0xFF1F2933 : 0xFFFFFFFF);
++            canvas.drawRoundRect(bar, br, br, paint);
++            paint.setStyle(Paint.Style.STROKE);
++            paint.setStrokeWidth(dp(1));
++            paint.setColor(dark ? 0x33FFFFFF : 0x1F000000);
++            canvas.drawRoundRect(bar, br, br, paint);
++        }
++
++        // значки на панели
++        paint.setStyle(Paint.Style.FILL);
++        final float cy = bar.centerY();
++        for (int i = 0; i < 3; i++) {
++            float cx = bar.left + bar.width() * (0.2f + 0.3f * i);
++            paint.setColor(i == 0 ? (dark ? 0xFF8CC0EE : 0xFF3A86C8) : (dark ? 0xFF8A97A4 : 0xFF8C9AA8));
++            canvas.drawCircle(cx, cy, dp(6), paint);
++        }
++        canvas.restore();
++
++        textPaint.setColor(dark ? 0xFFC3CED9 : 0xFF4A5A68);
++        textPaint.setFakeBoldText(true);
++        canvas.drawText(LocaleController.getString(blurDisabled ? R.string.ModBlurPreviewOff : R.string.ModBlurPreviewOn),
++                card.left + dp(12), card.top + dp(21), textPaint);
++    }
++}
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModColorPreviewView.java b/TMessagesProj/src/main/java/org/telegram/ui/ModColorPreviewView.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ModColorPreviewView.java	1970-01-01 00:00:00.000000000 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ModColorPreviewView.java	2026-11-11 08:05:51.618662485 +0000
+@@ -0,0 +1,153 @@
++package org.telegram.ui;
++
++import android.content.Context;
++import android.graphics.Canvas;
++import android.graphics.Paint;
++import android.graphics.RectF;
++import android.text.TextPaint;
++import android.text.TextUtils;
++import android.view.View;
++
++import org.telegram.messenger.AndroidUtilities;
++import org.telegram.messenger.LocaleController;
++import org.telegram.messenger.ModTheme;
++import org.telegram.messenger.R;
++import org.telegram.ui.ActionBar.Theme;
++
++/** Небольшое превью выбранного цветового пакета: мини-чат, кнопка, переключатель и счётчик. */
++public class ModColorPreviewView extends View {
++
++    private int pack;
++
++    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
++    private final TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
++    private final RectF card = new RectF();
++    private final RectF tmp = new RectF();
++
++    public ModColorPreviewView(Context context) {
++        super(context);
++    }
++
++    private static int dp(float v) {
++        return AndroidUtilities.dp(v);
++    }
++
++    public void setPack(int pack) {
++        this.pack = pack;
++        invalidate();
++    }
++
++    @Override
++    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
++        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), dp(220));
++    }
++
++    private int[] colors(boolean dark) {
++        if (pack > 0) {
++            int[] c = ModTheme.colors(pack, dark);
++            if (c != null) {
++                return c;
++            }
++        }
++        // стандартные цвета текущей темы
++        return new int[]{
++                Theme.getColor(Theme.key_chats_actionBackground),
++                Theme.getColor(Theme.key_chat_outBubble),
++                Theme.getColor(Theme.key_chat_outBubbleSelected),
++                Theme.getColor(Theme.key_chat_messageTextOut),
++                Theme.getColor(Theme.key_chat_outTimeText),
++                Theme.getColor(Theme.key_windowBackgroundWhite),
++                Theme.getColor(Theme.key_windowBackgroundGray),
++                Theme.getColor(Theme.key_chats_actionIcon)
++        };
++    }
++
++    private float drawBubbleText(Canvas canvas, String text, float maxWidth, float x, float baseline, int color, float size) {
++        textPaint.setTextSize(dp(size));
++        textPaint.setColor(color);
++        CharSequence shown = TextUtils.ellipsize(text, textPaint, maxWidth, TextUtils.TruncateAt.END);
++        canvas.drawText(shown, 0, shown.length(), x, baseline, textPaint);
++        return textPaint.measureText(shown, 0, shown.length());
++    }
++
++    @Override
++    protected void onDraw(Canvas canvas) {
++        final boolean dark = Theme.isCurrentThemeDark();
++        final int[] c = colors(dark);
++        final int textColor = dark ? 0xFFE6EAEE : 0xFF1C2024;
++        final int w = getWidth();
++        final int h = getHeight();
++        final float pad = dp(16);
++        final float r = dp(14);
++
++        card.set(pad, dp(8), w - pad, h - dp(8));
++        paint.setStyle(Paint.Style.FILL);
++        paint.setColor(c[ModTheme.SURFACE_DIM]);
++        canvas.drawRoundRect(card, r, r, paint);
++
++        // верхняя панель
++        final float hb = dp(34);
++        tmp.set(card.left, card.top, card.right, card.top + hb);
++        paint.setColor(c[ModTheme.SURFACE]);
++        canvas.drawRoundRect(tmp, r, r, paint);
++        canvas.drawRect(card.left, card.top + r, card.right, card.top + hb, paint);
++        paint.setColor(c[ModTheme.PRIMARY]);
++        canvas.drawCircle(card.left + dp(20), card.top + hb / 2f, dp(9), paint);
++        paint.setColor(textColor);
++        tmp.set(card.left + dp(36), card.top + hb / 2f - dp(3.5f), card.left + dp(36) + dp(70), card.top + hb / 2f + dp(3.5f));
++        canvas.drawRoundRect(tmp, dp(3.5f), dp(3.5f), paint);
++
++        // входящее сообщение
++        final float maxBubble = card.width() * 0.8f;
++        String hello = LocaleController.getString(R.string.ModPreviewHello);
++        textPaint.setTextSize(dp(13));
++        float helloW = Math.min(textPaint.measureText(hello), maxBubble - dp(24));
++        float inTop = card.top + hb + dp(14);
++        tmp.set(card.left + dp(12), inTop, card.left + dp(12) + helloW + dp(24), inTop + dp(34));
++        paint.setColor(c[ModTheme.SURFACE]);
++        canvas.drawRoundRect(tmp, dp(14), dp(14), paint);
++        drawBubbleText(canvas, hello, helloW, tmp.left + dp(12), tmp.top + dp(21), textColor, 13);
++
++        // исходящее сообщение
++        String reply = LocaleController.getString(R.string.ModPreviewReply);
++        textPaint.setTextSize(dp(13));
++        float replyW = Math.min(Math.max(textPaint.measureText(reply), dp(46)), maxBubble - dp(24));
++        float outTop = inTop + dp(34) + dp(10);
++        tmp.set(card.right - dp(12) - replyW - dp(24), outTop, card.right - dp(12), outTop + dp(44));
++        paint.setColor(c[ModTheme.CONTAINER]);
++        canvas.drawRoundRect(tmp, dp(14), dp(14), paint);
++        drawBubbleText(canvas, reply, replyW, tmp.left + dp(12), tmp.top + dp(19), c[ModTheme.ON_CONTAINER], 13);
++        textPaint.setTextSize(dp(10));
++        textPaint.setColor(c[ModTheme.ON_CONTAINER_VAR]);
++        canvas.drawText("12:41", tmp.right - dp(12) - textPaint.measureText("12:41"), tmp.top + dp(35), textPaint);
++
++        // кнопка-«плюс»
++        final float fabX = card.right - dp(34);
++        final float fabY = card.bottom - dp(32);
++        paint.setColor(c[ModTheme.PRIMARY]);
++        canvas.drawCircle(fabX, fabY, dp(20), paint);
++        paint.setColor(c[ModTheme.ON_PRIMARY]);
++        canvas.drawRoundRect(fabX - dp(8), fabY - dp(1.25f), fabX + dp(8), fabY + dp(1.25f), dp(1.25f), dp(1.25f), paint);
++        canvas.drawRoundRect(fabX - dp(1.25f), fabY - dp(8), fabX + dp(1.25f), fabY + dp(8), dp(1.25f), dp(1.25f), paint);
++
++        // переключатель
++        final float swLeft = card.left + dp(14);
++        final float swTop = card.bottom - dp(43);
++        tmp.set(swLeft, swTop, swLeft + dp(40), swTop + dp(22));
++        paint.setColor(c[ModTheme.PRIMARY]);
++        canvas.drawRoundRect(tmp, dp(11), dp(11), paint);
++        paint.setColor(c[ModTheme.ON_PRIMARY]);
++        canvas.drawCircle(swLeft + dp(40) - dp(11), swTop + dp(11), dp(8), paint);
++
++        // счётчик непрочитанных
++        final float chipLeft = swLeft + dp(40) + dp(18);
++        tmp.set(chipLeft, swTop + dp(1), chipLeft + dp(28), swTop + dp(21));
++        paint.setColor(c[ModTheme.PRIMARY]);
++        canvas.drawRoundRect(tmp, dp(10), dp(10), paint);
++        textPaint.setTextSize(dp(11));
++        textPaint.setFakeBoldText(true);
++        textPaint.setColor(c[ModTheme.ON_PRIMARY]);
++        canvas.drawText("3", tmp.centerX() - textPaint.measureText("3") / 2f, tmp.centerY() + dp(4), textPaint);
++        textPaint.setFakeBoldText(false);
++    }
++}
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 --- a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java	1970-01-01 00:00:00.000000000 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java	2026-11-11 05:34:32.789509098 +0000
-@@ -0,0 +1,301 @@
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java	2026-11-11 08:05:51.610650161 +0000
+@@ -0,0 +1,424 @@
 +package org.telegram.ui;
 +
 +import android.content.Context;
 +import android.view.View;
 +import android.view.ViewGroup;
++import android.widget.EditText;
 +import android.widget.FrameLayout;
 +
 +import androidx.annotation.NonNull;
@@ -510,11 +864,15 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +
 +import org.telegram.messenger.LocaleController;
 +import org.telegram.messenger.ModConfig;
++import org.telegram.messenger.ModTheme;
 +import org.telegram.messenger.ModUtils;
 +import org.telegram.messenger.R;
 +import org.telegram.ui.ActionBar.ActionBar;
++import org.telegram.ui.ActionBar.ActionBarMenuItem;
 +import org.telegram.ui.ActionBar.AlertDialog;
 +import org.telegram.ui.ActionBar.BaseFragment;
++import org.telegram.ui.ActionBar.SimpleActionBarMenu;
++import org.telegram.ui.ActionBar.Theme;
 +import org.telegram.ui.Cells.HeaderCell;
 +import org.telegram.ui.Cells.TextCheckCell;
 +import org.telegram.ui.Cells.TextInfoPrivacyCell;
@@ -522,31 +880,84 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +import org.telegram.ui.Components.LayoutHelper;
 +import org.telegram.ui.Components.RecyclerListView;
 +
-+/** Экран «Настройки мода». */
++import java.util.ArrayList;
++import java.util.Locale;
++
++/** Экран «Настройки мода»: категории и поиск по настройкам. */
 +public class ModSettingsActivity extends BaseFragment {
 +
-+    private static final int TYPE_HEADER = 0;
-+    private static final int TYPE_CHECK = 1;
-+    private static final int TYPE_INFO = 2;
-+    private static final int TYPE_VALUE = 3;
++    // типы строк
++    private static final int T_HEADER = 0;
++    private static final int T_CHECK = 1;
++    private static final int T_INFO = 2;
++    private static final int T_VALUE = 3;
++    private static final int T_BLUR_PREVIEW = 4;
++    private static final int T_COLOR_PREVIEW = 5;
 +
-+    private static final int ROW_APPEARANCE_HEADER = 0;
-+    private static final int ROW_STYLE = 1;
-+    private static final int ROW_STYLE_INFO = 2;
-+    private static final int ROW_FUNCTIONS_HEADER = 3;
-+    private static final int ROW_LOCAL_PREMIUM = 4;
-+    private static final int ROW_SAVE_DELETED = 5;
-+    private static final int ROW_NO_READ = 6;
-+    private static final int ROW_NO_TYPING = 7;
-+    private static final int ROW_CONFIRM_CALLS = 8;
-+    private static final int ROW_FUNCTIONS_INFO = 9;
-+    private static final int ROW_UI_HEADER = 10;
-+    private static final int ROW_HIDE_PREMIUM = 11;
-+    private static final int ROW_HIDE_STARS = 12;
-+    private static final int ROW_UI_INFO = 13;
-+    private static final int ROW_ABOUT_HEADER = 14;
-+    private static final int ROW_VERSION = 15;
-+    private static final int ROW_COUNT = 16;
++    // категории
++    private static final int CAT_APPEARANCE = 0;
++    private static final int CAT_PRIVACY = 1;
++    private static final int CAT_MESSAGES = 2;
++    private static final int CAT_PREMIUM = 3;
++    private static final int CAT_ABOUT = 4;
++    private static final int[] CAT_TITLES = {
++            R.string.ModCatAppearance,
++            R.string.ModCatPrivacy,
++            R.string.ModCatMessages,
++            R.string.ModCatPremium,
++            R.string.ModCatAbout
++    };
++
++    private static final String KEY_PACK = "color_pack_item";
++    private static final String KEY_VERSION = "version_item";
++
++    /** Настройка, по которой работает поиск. */
++    private static class Item {
++        final String key;
++        final int type;
++        final int titleRes;
++        final int category;
++        final String keywords;
++
++        Item(String key, int type, int titleRes, int category, String keywords) {
++            this.key = key;
++            this.type = type;
++            this.titleRes = titleRes;
++            this.category = category;
++            this.keywords = keywords;
++        }
++    }
++
++    private static final Item[] ITEMS = {
++            new Item(ModConfig.KEY_NO_BLUR, T_CHECK, R.string.ModNoBlur, CAT_APPEARANCE, "blur размытие стекло glass liquid прозрачность"),
++            new Item(KEY_PACK, T_VALUE, R.string.ModColorPack, CAT_APPEARANCE, "цвет цвета тема оформление пакет color theme palette accent"),
++            new Item(ModConfig.KEY_NO_TYPING, T_CHECK, R.string.ModNoTyping, CAT_PRIVACY, "печатает typing статус ghost"),
++            new Item(ModConfig.KEY_NO_READ, T_CHECK, R.string.ModNoRead, CAT_PRIVACY, "прочитано прочтение read receipts тихо невидимка"),
++            new Item(ModConfig.KEY_CONFIRM_CALLS, T_CHECK, R.string.ModConfirmCalls, CAT_PRIVACY, "звонок звонки call confirm подтверждение"),
++            new Item(ModConfig.KEY_SAVE_DELETED, T_CHECK, R.string.ModSaveDeleted, CAT_MESSAGES, "удалённые удаленные deleted сохранять корзина"),
++            new Item(ModConfig.KEY_LOCAL_PREMIUM, T_CHECK, R.string.ModLocalPremium, CAT_PREMIUM, "премиум premium локальный подписка"),
++            new Item(ModConfig.KEY_HIDE_PREMIUM, T_CHECK, R.string.ModHidePremium, CAT_PREMIUM, "премиум premium скрыть hide"),
++            new Item(ModConfig.KEY_HIDE_STARS, T_CHECK, R.string.ModHideStars, CAT_PREMIUM, "звёзды звезды stars скрыть hide"),
++            new Item(KEY_VERSION, T_VALUE, R.string.ModVersion, CAT_ABOUT, "версия version о моде about")
++    };
++
++    /** Строка списка. */
++    private static class Row {
++        final int type;
++        final Item item;
++        final int category;
++        final int textRes;
++
++        Row(int type, Item item, int category, int textRes) {
++            this.type = type;
++            this.item = item;
++            this.category = category;
++            this.textRes = textRes;
++        }
++    }
++
++    private final ArrayList<Row> rows = new ArrayList<>();
++    private String query = "";
 +
 +    private RecyclerListView listView;
 +    private ListAdapter adapter;
@@ -570,8 +981,31 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +            }
 +        });
 +
++        final SimpleActionBarMenu menu = simpleActionBar.createMenu();
++        ActionBarMenuItem searchItem = menu.addItem(0, R.drawable.outline_header_search).setIsSearchField(true).setActionBarMenuItemSearchListener(new ActionBarMenuItem.ActionBarMenuItemSearchListener() {
++            @Override
++            public void onSearchCollapse() {
++                query = "";
++                rebuildRows();
++            }
++
++            @Override
++            public void onSearchExpand() {
++                query = "";
++            }
++
++            @Override
++            public void onTextChanged(EditText editText) {
++                query = editText.getText().toString();
++                rebuildRows();
++            }
++        });
++        searchItem.setSearchFieldHint(LocaleController.getString(R.string.ModSearchHint));
++
 +        FrameLayout frameLayout = new FrameLayout(context);
 +        fragmentView = frameLayout;
++
++        rebuildRows();
 +
 +        listView = new RecyclerListView(context);
 +        listView.setSectionsDrawBackground(true);
@@ -587,59 +1021,129 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +        return fragmentView;
 +    }
 +
-+    private static String keyFor(int position) {
-+        switch (position) {
-+            case ROW_NO_TYPING: return ModConfig.KEY_NO_TYPING;
-+            case ROW_CONFIRM_CALLS: return ModConfig.KEY_CONFIRM_CALLS;
-+            case ROW_HIDE_PREMIUM: return ModConfig.KEY_HIDE_PREMIUM;
-+            case ROW_HIDE_STARS: return ModConfig.KEY_HIDE_STARS;
-+            case ROW_LOCAL_PREMIUM: return ModConfig.KEY_LOCAL_PREMIUM;
-+            case ROW_SAVE_DELETED: return ModConfig.KEY_SAVE_DELETED;
-+            case ROW_NO_READ: return ModConfig.KEY_NO_READ;
++    private void rebuildRows() {
++        rows.clear();
++        final String q = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
++        if (q.isEmpty()) {
++            addHeader(CAT_APPEARANCE);
++            rows.add(new Row(T_CHECK, ITEMS[0], CAT_APPEARANCE, 0));
++            rows.add(new Row(T_BLUR_PREVIEW, null, CAT_APPEARANCE, 0));
++            rows.add(new Row(T_VALUE, ITEMS[1], CAT_APPEARANCE, 0));
++            rows.add(new Row(T_COLOR_PREVIEW, null, CAT_APPEARANCE, 0));
++            rows.add(new Row(T_INFO, null, CAT_APPEARANCE, R.string.ModAppearanceInfo));
++
++            addHeader(CAT_PRIVACY);
++            rows.add(new Row(T_CHECK, ITEMS[2], CAT_PRIVACY, 0));
++            rows.add(new Row(T_CHECK, ITEMS[3], CAT_PRIVACY, 0));
++            rows.add(new Row(T_CHECK, ITEMS[4], CAT_PRIVACY, 0));
++            rows.add(new Row(T_INFO, null, CAT_PRIVACY, R.string.ModPrivacyInfo));
++
++            addHeader(CAT_MESSAGES);
++            rows.add(new Row(T_CHECK, ITEMS[5], CAT_MESSAGES, 0));
++            rows.add(new Row(T_INFO, null, CAT_MESSAGES, R.string.ModMessagesInfo));
++
++            addHeader(CAT_PREMIUM);
++            rows.add(new Row(T_CHECK, ITEMS[6], CAT_PREMIUM, 0));
++            rows.add(new Row(T_CHECK, ITEMS[7], CAT_PREMIUM, 0));
++            rows.add(new Row(T_CHECK, ITEMS[8], CAT_PREMIUM, 0));
++            rows.add(new Row(T_INFO, null, CAT_PREMIUM, R.string.ModPremiumInfo));
++
++            addHeader(CAT_ABOUT);
++            rows.add(new Row(T_VALUE, ITEMS[9], CAT_ABOUT, 0));
++        } else {
++            boolean any = false;
++            for (int cat = 0; cat < CAT_TITLES.length; cat++) {
++                boolean headerAdded = false;
++                for (Item item : ITEMS) {
++                    if (item.category != cat || !matches(item, q)) {
++                        continue;
++                    }
++                    if (!headerAdded) {
++                        addHeader(cat);
++                        headerAdded = true;
++                    }
++                    rows.add(new Row(item.type, item, cat, 0));
++                    any = true;
++                }
++            }
++            if (!any) {
++                rows.add(new Row(T_INFO, null, -1, R.string.ModNothingFound));
++            }
 +        }
-+        return null;
++        if (adapter != null) {
++            adapter.notifyDataSetChanged();
++        }
 +    }
 +
-+    private static String styleName(int style) {
-+        switch (style) {
-+            case ModConfig.STYLE_MATERIAL3: return LocaleController.getString(R.string.ModStyleMaterial3);
-+            case ModConfig.STYLE_GLASS: return LocaleController.getString(R.string.ModStyleGlass);
++    private void addHeader(int category) {
++        rows.add(new Row(T_HEADER, null, category, CAT_TITLES[category]));
++    }
++
++    private static boolean matches(Item item, String q) {
++        String title = LocaleController.getString(item.titleRes).toLowerCase(Locale.ROOT);
++        String cat = LocaleController.getString(CAT_TITLES[item.category]).toLowerCase(Locale.ROOT);
++        return title.contains(q) || cat.contains(q) || item.keywords.contains(q);
++    }
++
++    private static String packName(int pack) {
++        if (pack < 0 || pack >= ModTheme.PACK_NAMES.length) {
++            pack = 0;
 +        }
-+        return LocaleController.getString(R.string.ModStyleDefault);
++        return LocaleController.getString(ModTheme.PACK_NAMES[pack]);
 +    }
 +
 +    private void onRowClicked(View view, int position) {
-+        if (position == ROW_STYLE) {
-+            showStyleDialog();
++        if (position < 0 || position >= rows.size()) {
 +            return;
 +        }
-+        String key = keyFor(position);
-+        if (key != null && view instanceof TextCheckCell) {
-+            boolean value = ModConfig.toggle(key);
++        Row row = rows.get(position);
++        if (row.item == null) {
++            return;
++        }
++        if (KEY_PACK.equals(row.item.key)) {
++            showPackDialog();
++            return;
++        }
++        if (row.type == T_CHECK && view instanceof TextCheckCell) {
++            boolean value = ModConfig.toggle(row.item.key);
 +            ((TextCheckCell) view).setChecked(value);
-+            if (position == ROW_LOCAL_PREMIUM) {
++            if (ModConfig.KEY_NO_BLUR.equals(row.item.key)) {
++                refreshPreviews();
++                showRestartDialog();
++            } else if (ModConfig.KEY_LOCAL_PREMIUM.equals(row.item.key)) {
 +                showRestartDialog();
 +            }
 +        }
 +    }
 +
-+    private void showStyleDialog() {
++    private void refreshPreviews() {
++        if (adapter == null) {
++            return;
++        }
++        for (int i = 0; i < rows.size(); i++) {
++            int type = rows.get(i).type;
++            if (type == T_BLUR_PREVIEW || type == T_COLOR_PREVIEW) {
++                adapter.notifyItemChanged(i);
++            }
++        }
++    }
++
++    private void showPackDialog() {
 +        if (getParentActivity() == null) {
 +            return;
 +        }
-+        CharSequence[] items = new CharSequence[]{
-+                styleName(ModConfig.STYLE_DEFAULT),
-+                styleName(ModConfig.STYLE_MATERIAL3),
-+                styleName(ModConfig.STYLE_GLASS)
-+        };
++        CharSequence[] items = new CharSequence[ModTheme.PACK_NAMES.length];
++        for (int i = 0; i < items.length; i++) {
++            items[i] = packName(i);
++        }
 +        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-+        builder.setTitle(LocaleController.getString(R.string.ModStyle));
++        builder.setTitle(LocaleController.getString(R.string.ModColorPack));
 +        builder.setItems(items, (dialog, which) -> {
-+            ModConfig.applyStyle(which);
++            ModConfig.setColorPack(which);
 +            if (adapter != null) {
-+                adapter.notifyItemChanged(ROW_STYLE);
++                adapter.notifyDataSetChanged();
 +            }
-+            showRestartDialog();
++            ModTheme.applyLive();
 +        });
 +        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
 +        showDialog(builder.create());
@@ -666,27 +1170,47 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +
 +        @Override
 +        public int getItemCount() {
-+            return ROW_COUNT;
++            return rows.size();
++        }
++
++        @Override
++        public int getItemViewType(int position) {
++            return rows.get(position).type;
 +        }
 +
 +        @Override
 +        public boolean isEnabled(RecyclerView.ViewHolder holder) {
 +            int position = holder.getAdapterPosition();
-+            return holder.getItemViewType() == TYPE_CHECK || position == ROW_STYLE;
++            if (position < 0 || position >= rows.size()) {
++                return false;
++            }
++            Row row = rows.get(position);
++            return row.type == T_CHECK || (row.type == T_VALUE && row.item != null && KEY_PACK.equals(row.item.key));
 +        }
 +
 +        @NonNull
 +        @Override
 +        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
 +            View view;
-+            if (viewType == TYPE_HEADER) {
-+                view = new HeaderCell(context);
-+            } else if (viewType == TYPE_CHECK) {
-+                view = new TextCheckCell(context);
-+            } else if (viewType == TYPE_VALUE) {
-+                view = new TextSettingsCell(context);
-+            } else {
-+                view = new TextInfoPrivacyCell(context);
++            switch (viewType) {
++                case T_HEADER:
++                    view = new HeaderCell(context);
++                    break;
++                case T_CHECK:
++                    view = new TextCheckCell(context);
++                    break;
++                case T_VALUE:
++                    view = new TextSettingsCell(context);
++                    break;
++                case T_BLUR_PREVIEW:
++                    view = new ModBlurPreviewView(context);
++                    break;
++                case T_COLOR_PREVIEW:
++                    view = new ModColorPreviewView(context);
++                    break;
++                default:
++                    view = new TextInfoPrivacyCell(context);
++                    break;
 +            }
 +            view.setLayoutParams(new RecyclerView.LayoutParams(
 +                    RecyclerView.LayoutParams.MATCH_PARENT,
@@ -695,95 +1219,47 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +            return new RecyclerListView.Holder(view);
 +        }
 +
-+        @Override
-+        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-+            switch (holder.getItemViewType()) {
-+                case TYPE_HEADER: {
-+                    HeaderCell cell = (HeaderCell) holder.itemView;
-+                    int title;
-+                    if (position == ROW_APPEARANCE_HEADER) {
-+                        title = R.string.ModHeaderAppearance;
-+                    } else if (position == ROW_FUNCTIONS_HEADER) {
-+                        title = R.string.ModHeaderFunctions;
-+                    } else if (position == ROW_UI_HEADER) {
-+                        title = R.string.ModHeaderInterface;
-+                    } else {
-+                        title = R.string.ModHeaderAbout;
-+                    }
-+                    cell.setText(LocaleController.getString(title));
-+                    break;
-+                }
-+                case TYPE_CHECK: {
-+                    TextCheckCell cell = (TextCheckCell) holder.itemView;
-+                    String key = keyFor(position);
-+                    int title;
-+                    boolean divider = true;
-+                    if (position == ROW_LOCAL_PREMIUM) {
-+                        title = R.string.ModLocalPremium;
-+                    } else if (position == ROW_SAVE_DELETED) {
-+                        title = R.string.ModSaveDeleted;
-+                    } else if (position == ROW_NO_READ) {
-+                        title = R.string.ModNoRead;
-+                    } else if (position == ROW_NO_TYPING) {
-+                        title = R.string.ModNoTyping;
-+                    } else if (position == ROW_CONFIRM_CALLS) {
-+                        title = R.string.ModConfirmCalls;
-+                        divider = false;
-+                    } else if (position == ROW_HIDE_PREMIUM) {
-+                        title = R.string.ModHidePremium;
-+                    } else {
-+                        title = R.string.ModHideStars;
-+                        divider = false;
-+                    }
-+                    cell.setTextAndCheck(LocaleController.getString(title), ModConfig.get(key), divider);
-+                    break;
-+                }
-+                case TYPE_VALUE: {
-+                    TextSettingsCell cell = (TextSettingsCell) holder.itemView;
-+                    if (position == ROW_STYLE) {
-+                        cell.setTextAndValue(LocaleController.getString(R.string.ModStyle), styleName(ModConfig.getStyle()), false);
-+                    } else {
-+                        cell.setTextAndValue(LocaleController.getString(R.string.ModVersion), ModConfig.MOD_VERSION, false);
-+                    }
-+                    break;
-+                }
-+                default: {
-+                    TextInfoPrivacyCell cell = (TextInfoPrivacyCell) holder.itemView;
-+                    int text;
-+                    if (position == ROW_STYLE_INFO) {
-+                        text = R.string.ModStyleInfo;
-+                    } else if (position == ROW_FUNCTIONS_INFO) {
-+                        text = R.string.ModFunctionsInfo;
-+                    } else {
-+                        text = R.string.ModInterfaceInfo;
-+                    }
-+                    cell.setText(LocaleController.getString(text));
-+                    break;
-+                }
++        private boolean hasDividerAfter(int position) {
++            if (position + 1 >= rows.size()) {
++                return false;
 +            }
++            int next = rows.get(position + 1).type;
++            return next == T_CHECK || next == T_VALUE;
 +        }
 +
 +        @Override
-+        public int getItemViewType(int position) {
-+            switch (position) {
-+                case ROW_APPEARANCE_HEADER:
-+                case ROW_FUNCTIONS_HEADER:
-+                case ROW_UI_HEADER:
-+                case ROW_ABOUT_HEADER:
-+                    return TYPE_HEADER;
-+                case ROW_LOCAL_PREMIUM:
-+                case ROW_SAVE_DELETED:
-+                case ROW_NO_READ:
-+                case ROW_NO_TYPING:
-+                case ROW_CONFIRM_CALLS:
-+                case ROW_HIDE_PREMIUM:
-+                case ROW_HIDE_STARS:
-+                    return TYPE_CHECK;
-+                case ROW_STYLE:
-+                case ROW_VERSION:
-+                    return TYPE_VALUE;
-+                default:
-+                    return TYPE_INFO;
++        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
++            Row row = rows.get(position);
++            switch (row.type) {
++                case T_HEADER: {
++                    ((HeaderCell) holder.itemView).setText(LocaleController.getString(row.textRes));
++                    break;
++                }
++                case T_CHECK: {
++                    TextCheckCell cell = (TextCheckCell) holder.itemView;
++                    cell.setTextAndCheck(LocaleController.getString(row.item.titleRes), ModConfig.get(row.item.key), hasDividerAfter(position));
++                    break;
++                }
++                case T_VALUE: {
++                    TextSettingsCell cell = (TextSettingsCell) holder.itemView;
++                    String value = KEY_PACK.equals(row.item.key) ? packName(ModConfig.getColorPack()) : ModConfig.MOD_VERSION;
++                    cell.setTextAndValue(LocaleController.getString(row.item.titleRes), value, hasDividerAfter(position));
++                    break;
++                }
++                case T_BLUR_PREVIEW: {
++                    holder.itemView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
++                    ((ModBlurPreviewView) holder.itemView).setBlurDisabled(ModConfig.isNoBlur());
++                    break;
++                }
++                case T_COLOR_PREVIEW: {
++                    holder.itemView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
++                    ((ModColorPreviewView) holder.itemView).setPack(ModConfig.getColorPack());
++                    break;
++                }
++                default: {
++                    ((TextInfoPrivacyCell) holder.itemView).setText(LocaleController.getString(row.textRes));
++                    break;
++                }
 +            }
 +        }
 +    }
@@ -799,8 +1275,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +    }
 +}
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java
---- a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 05:34:33.026750301 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 05:34:32.793038128 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 08:05:51.803616594 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 08:05:51.622431867 +0000
 @@ -76,6 +76,7 @@
  import org.telegram.messenger.LocaleController;
  import org.telegram.messenger.MediaDataController;
@@ -809,15 +1285,16 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java b/
  import org.telegram.messenger.MessagesStorage;
  import org.telegram.messenger.NotificationCenter;
  import org.telegram.messenger.R;
-@@ -804,6 +805,7 @@
-         items.add(SettingCell.Factory.of(8, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.settings_devices, getString(R.string.SettingsDevices), getString(R.string.SettingsDevicesInfo)));
-         items.add(SettingCell.Factory.of(9, IconBackgroundColors.ORANGE_DEEP.top, IconBackgroundColors.ORANGE_DEEP.bottom, R.drawable.settings_power, getString(R.string.SettingsPowerSaving), getString(R.string.SettingsPowerSavingInfo)));
-         items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_language, getString(R.string.SettingsLanguage), LocaleController.getCurrentLanguageName()));
-+        items.add(SettingCell.Factory.of(28, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.settings_power, getString(R.string.ModSettings), getString(R.string.ModSettingsInfo)));
+@@ -722,6 +723,8 @@
+         }
  
-         items.add(UItem.asShadow(null));
-         if (!walletAbove && getMessagesController().config.walletAvailable.get()) {
-@@ -812,10 +814,10 @@
+         items.add(UItem.asCustomShadow(topView, 200 - 12));
++        items.add(SettingCell.Factory.of(28, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_features, getString(R.string.ModSettings), getString(R.string.ModSettingsInfo)));
++        items.add(UItem.asShadow(null));
+ 
+         accountNumbers.clear();
+         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+@@ -812,10 +815,10 @@
              items.add(UItem.asShadow(null));
          }
  
@@ -830,7 +1307,7 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java b/
              StarsController c = StarsController.getInstance(currentAccount);
              long balance = c.getBalance().amount;
              items.add(SettingCell.Factory.of(12, 0xFFEFA612, 0xFFE77512, R.drawable.settings_stars, getString(R.string.TelegramStars), null, c.balanceAvailable() && balance > 0 ? StarsIntroActivity.formatStarsAmount(c.getBalance(), 0.85f, ' ') : ""));
-@@ -1003,6 +1005,10 @@
+@@ -1003,6 +1006,10 @@
                  presentFragment(new HeaderSettingsActivity());
                  break;
              }
@@ -842,79 +1319,101 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java b/
      }
  
 diff -ruN a/TMessagesProj/src/main/res/values/strings.xml b/TMessagesProj/src/main/res/values/strings.xml
---- a/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 05:34:33.358750321 +0000
-+++ b/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 05:34:33.303824206 +0000
-@@ -11678,4 +11678,34 @@
+--- a/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 08:05:52.187616617 +0000
++++ b/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 08:05:52.145509342 +0000
+@@ -11678,4 +11678,45 @@
      <string name="FpnvConsentCountry">Country</string>
      <string name="FpnvConsentMccMnc">MCC / MNC</string>
      <string name="FpnvConsentPhoneNumber">Phone Number</string>
 +    <string name="ModSettings">Mod Settings</string>
 +    <string name="ModSettingsInfo">Extra features of this mod</string>
-+    <string name="ModHeaderPrivacy">Privacy</string>
-+    <string name="ModHeaderInterface">Interface</string>
-+    <string name="ModHeaderAbout">About</string>
++    <string name="ModSearchHint">Search settings</string>
++    <string name="ModNothingFound">Nothing found</string>
++    <string name="ModCatAppearance">Appearance</string>
++    <string name="ModCatPrivacy">Privacy</string>
++    <string name="ModCatMessages">Messages</string>
++    <string name="ModCatPremium">Premium and Stars</string>
++    <string name="ModCatAbout">About</string>
++    <string name="ModNoBlur">Disable all blur</string>
++    <string name="ModBlurPreviewOn">Blur on</string>
++    <string name="ModBlurPreviewOff">Blur off</string>
++    <string name="ModColorPack">Color pack</string>
++    <string name="ModPackDefault">Standard</string>
++    <string name="ModPackSky">Sky blue</string>
++    <string name="ModPackPink">Pink</string>
++    <string name="ModPackMint">Mint</string>
++    <string name="ModPackLavender">Lavender</string>
++    <string name="ModPackPeach">Peach</string>
++    <string name="ModPackGraphite">Graphite</string>
++    <string name="ModPreviewHello">Hi! How do you like the new colors?</string>
++    <string name="ModPreviewReply">Looks great</string>
++    <string name="ModAppearanceInfo">Blur changes apply after a restart. Color packs apply instantly.</string>
 +    <string name="ModNoTyping">Don\'t send typing status</string>
++    <string name="ModNoRead">Read without marking as read</string>
 +    <string name="ModConfirmCalls">Confirm before calling</string>
-+    <string name="ModPrivacyInfo">The other person will not see \"typing…\" while you write a message.</string>
++    <string name="ModPrivacyInfo">The typing status and read receipts are not sent to the other person. After you reply, Telegram still marks the chat as read.</string>
++    <string name="ModSaveDeleted">Keep deleted messages</string>
++    <string name="ModMessagesInfo">Messages deleted by the other person stay in the chat with a mark.</string>
++    <string name="ModLocalPremium">Local Telegram Premium</string>
 +    <string name="ModHidePremium">Hide Telegram Premium</string>
 +    <string name="ModHideStars">Hide Telegram Stars</string>
-+    <string name="ModInterfaceInfo">Hides the selected items in the Settings screen. Reopen Settings to apply.</string>
++    <string name="ModPremiumInfo">Local Premium works on this device only; server-side features still require a real subscription. Hidden items disappear after reopening Settings.</string>
 +    <string name="ModVersion">Mod version</string>
-+    <string name="ModCallConfirmTitle">Call</string>
-+    <string name="ModCallConfirmText">Are you sure you want to call this user?</string>
-+    <string name="ModHeaderAppearance">Appearance</string>
-+    <string name="ModHeaderFunctions">Features</string>
-+    <string name="ModStyle">Interface style</string>
-+    <string name="ModStyleDefault">Standard</string>
-+    <string name="ModStyleMaterial3">Material 3</string>
-+    <string name="ModStyleGlass">Liquid Glass</string>
-+    <string name="ModStyleInfo">Material 3 uses system Material You colors (Android 12+). Liquid Glass enables the built-in glass effect and blur (Android 13+).</string>
++    <string name="ModDeletedMark">deleted</string>
 +    <string name="ModRestartTitle">Restart required</string>
 +    <string name="ModRestartText">Restart the app to apply the changes.</string>
 +    <string name="ModRestartNow">Restart</string>
 +    <string name="ModRestartLater">Later</string>
-+    <string name="ModLocalPremium">Local Telegram Premium</string>
-+    <string name="ModSaveDeleted">Keep deleted messages</string>
-+    <string name="ModNoRead">Read without marking as read</string>
-+    <string name="ModFunctionsInfo">Local Premium unlocks Premium interface features on this device only; server-side features still require a real subscription. Deleted messages stay in the chat with a mark. Reading quietly does not send read receipts to the other person.</string>
-+    <string name="ModDeletedMark">deleted</string>
++    <string name="ModCallConfirmTitle">Call</string>
++    <string name="ModCallConfirmText">Are you sure you want to call this user?</string>
  </resources>
 diff -ruN a/TMessagesProj/src/main/res/values-ru/strings.xml b/TMessagesProj/src/main/res/values-ru/strings.xml
---- a/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 05:34:33.570750334 +0000
-+++ b/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 05:34:33.367931585 +0000
-@@ -263,4 +263,34 @@
+--- a/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 08:05:52.295616623 +0000
++++ b/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 08:05:52.193084397 +0000
+@@ -263,4 +263,45 @@
      <string name="RemindTodayAt">\'Отправить сегодня в\' HH:mm</string>
      <string name="RemindDayAt">\'Отправить\' d MMM \'в\' HH:mm</string>
      <string name="RemindDayYearAt">\'Напомнить\' d MMM yyyy \'в\' HH:mm</string>
 +    <string name="ModSettings">Настройки мода</string>
 +    <string name="ModSettingsInfo">Дополнительные функции мода</string>
-+    <string name="ModHeaderPrivacy">Приватность</string>
-+    <string name="ModHeaderInterface">Интерфейс</string>
-+    <string name="ModHeaderAbout">О моде</string>
++    <string name="ModSearchHint">Поиск настроек</string>
++    <string name="ModNothingFound">Ничего не найдено</string>
++    <string name="ModCatAppearance">Внешний вид</string>
++    <string name="ModCatPrivacy">Приватность</string>
++    <string name="ModCatMessages">Сообщения</string>
++    <string name="ModCatPremium">Premium и Stars</string>
++    <string name="ModCatAbout">О моде</string>
++    <string name="ModNoBlur">Отключить всё размытие</string>
++    <string name="ModBlurPreviewOn">Размытие включено</string>
++    <string name="ModBlurPreviewOff">Размытие выключено</string>
++    <string name="ModColorPack">Цветовой пакет</string>
++    <string name="ModPackDefault">Стандартный</string>
++    <string name="ModPackSky">Голубой</string>
++    <string name="ModPackPink">Розовый</string>
++    <string name="ModPackMint">Мятный</string>
++    <string name="ModPackLavender">Сиреневый</string>
++    <string name="ModPackPeach">Персиковый</string>
++    <string name="ModPackGraphite">Графит</string>
++    <string name="ModPreviewHello">Привет! Как тебе новые цвета?</string>
++    <string name="ModPreviewReply">Выглядит отлично</string>
++    <string name="ModAppearanceInfo">Размытие применится после перезапуска. Цветовые пакеты применяются сразу.</string>
 +    <string name="ModNoTyping">Не отправлять статус «печатает»</string>
++    <string name="ModNoRead">Читать без отметки о прочтении</string>
 +    <string name="ModConfirmCalls">Подтверждение перед звонком</string>
-+    <string name="ModPrivacyInfo">Собеседник не увидит «печатает…», пока вы пишете сообщение.</string>
++    <string name="ModPrivacyInfo">Статус «печатает» и отметка о прочтении не отправляются собеседнику. После вашего ответа Telegram всё равно отмечает чат прочитанным.</string>
++    <string name="ModSaveDeleted">Сохранять удалённые сообщения</string>
++    <string name="ModMessagesInfo">Сообщения, удалённые собеседником, остаются в чате с пометкой.</string>
++    <string name="ModLocalPremium">Локальный Telegram Premium</string>
 +    <string name="ModHidePremium">Скрыть Telegram Premium</string>
 +    <string name="ModHideStars">Скрыть Telegram Stars</string>
-+    <string name="ModInterfaceInfo">Скрывает выбранные пункты на экране настроек. Откройте настройки заново, чтобы применить.</string>
++    <string name="ModPremiumInfo">Локальный Premium работает только на этом устройстве; серверные возможности по-прежнему требуют настоящей подписки. Скрытые пункты пропадут после повторного открытия настроек.</string>
 +    <string name="ModVersion">Версия мода</string>
-+    <string name="ModCallConfirmTitle">Звонок</string>
-+    <string name="ModCallConfirmText">Вы уверены, что хотите позвонить этому пользователю?</string>
-+    <string name="ModHeaderAppearance">Внешний вид</string>
-+    <string name="ModHeaderFunctions">Функции</string>
-+    <string name="ModStyle">Стиль интерфейса</string>
-+    <string name="ModStyleDefault">Стандартный</string>
-+    <string name="ModStyleMaterial3">Material 3</string>
-+    <string name="ModStyleGlass">Liquid Glass</string>
-+    <string name="ModStyleInfo">Material 3 использует системные цвета Material You (Android 12+). Liquid Glass включает встроенный эффект стекла и размытие (Android 13+).</string>
++    <string name="ModDeletedMark">удалено</string>
 +    <string name="ModRestartTitle">Нужен перезапуск</string>
 +    <string name="ModRestartText">Перезапустите приложение, чтобы применить изменения.</string>
 +    <string name="ModRestartNow">Перезапустить</string>
 +    <string name="ModRestartLater">Позже</string>
-+    <string name="ModLocalPremium">Локальный Telegram Premium</string>
-+    <string name="ModSaveDeleted">Сохранять удалённые сообщения</string>
-+    <string name="ModNoRead">Читать без отметки о прочтении</string>
-+    <string name="ModFunctionsInfo">Локальный Premium открывает премиум-функции интерфейса только на этом устройстве; серверные возможности по-прежнему требуют настоящей подписки. Удалённые сообщения остаются в чате с пометкой. Тихое чтение не отправляет собеседнику отметку о прочтении.</string>
-+    <string name="ModDeletedMark">удалено</string>
++    <string name="ModCallConfirmTitle">Звонок</string>
++    <string name="ModCallConfirmText">Вы уверены, что хотите позвонить этому пользователю?</string>
  </resources>
 \ No newline at end of file
