@@ -147,6 +147,7 @@ import org.telegram.messenger.DocumentObject;
 import org.telegram.messenger.Emoji;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.FerrumConfig;
 import org.telegram.messenger.FlagSecureReason;
 import org.telegram.messenger.ImageLoader;
 import org.telegram.messenger.ImageLocation;
@@ -1230,10 +1231,30 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         private int currentColor;
         private Paint paint = new Paint();
+        private ImageView ferrumBannerView;
 
         public TopView(Context context) {
             super(context);
             setWillNotDraw(false);
+            if (myProfile) {
+                String bannerUri = FerrumConfig.getProfileBannerUri(context);
+                if (bannerUri != null) {
+                    try {
+                        ferrumBannerView = new ImageView(context);
+                        ferrumBannerView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                        ferrumBannerView.setImageURI(android.net.Uri.parse(bannerUri));
+                        ferrumBannerView.setAlpha(0.48f);
+                        float scale = FerrumConfig.getBannerScale(context);
+                        ferrumBannerView.setScaleX(scale);
+                        ferrumBannerView.setScaleY(scale);
+                        ferrumBannerView.setTranslationX(AndroidUtilities.dp(60) * FerrumConfig.getBannerOffsetX(context));
+                        ferrumBannerView.setTranslationY(AndroidUtilities.dp(45) * FerrumConfig.getBannerOffsetY(context));
+                        addView(ferrumBannerView, new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+                    } catch (Exception e) {
+                        FileLog.e(e);
+                    }
+                }
+            }
         }
 
         @Override
