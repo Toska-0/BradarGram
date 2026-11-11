@@ -93,6 +93,7 @@ public class FerrumSettingsActivity extends BaseFragment {
             row.addView(chip, lp);
             chip.setOnClickListener(v -> {
                 FerrumConfig.setAccentColor(context, color);
+                FerrumConfig.applyAccentTheme(context);
                 Toast.makeText(context, "Акцентный цвет сохранён", Toast.LENGTH_SHORT).show();
             });
         }
