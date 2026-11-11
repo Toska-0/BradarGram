@@ -29,6 +29,8 @@ public class FerrumSettingsActivity extends BaseFragment {
 
     private static final int REQUEST_BANNER = 7101;
     private static final int REQUEST_SCAN = 7102;
+    private static final int REQUEST_EXPORT = 7103;
+    private static final int REQUEST_IMPORT = 7104;
     private LinearLayout content;
     private TextView bannerStatus;
     private TextView ringWidthLabel;
@@ -168,10 +170,23 @@ public class FerrumSettingsActivity extends BaseFragment {
 
     private void addSyncSection(Context context) {
         addHeader(context, "СИНХРОНИЗАЦИЯ");
-        addCard(context, "Настройки между устройствами", "Синхронизация пока не подключена. Локальные параметры не загружаются в облако Telegram и не передаются на сервер.");
-        TextView status = addValue(context, "Статус: только на этом устройстве");
+        addCard(context, "Настройки между устройствами", "Автоматическая облачная синхронизация пока не подключена. Можно перенести совместимые настройки вручную через файл. Изображение баннера остаётся на исходном устройстве.");
+        addButton(context, "Экспортировать настройки", v -> {
+            Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("application/json");
+            intent.putExtra(Intent.EXTRA_TITLE, "ferrum-settings.json");
+            startActivityForResult(intent, REQUEST_EXPORT);
+        });
+        addButton(context, "Импортировать настройки", v -> {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("application/json");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivityForResult(intent, REQUEST_IMPORT);
+        });
+        addValue(context, "Экспорт не содержит токены, переписки или данные Telegram-аккаунта.");
     }
-
     private void addHeader(Context context, String title) {
         TextView view = new TextView(context);
         view.setText(title);
@@ -255,6 +270,37 @@ public class FerrumSettingsActivity extends BaseFragment {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == Activity.RESULT_OK && data != null && data.getData() != null
+                && (requestCode == REQUEST_EXPORT || requestCode == REQUEST_IMPORT)) {
+            Uri uri = data.getData();
+            try {
+                if (requestCode == REQUEST_EXPORT) {
+                    String json = FerrumConfig.exportPortableSettings(getParentActivity());
+                    try (java.io.OutputStream output = getParentActivity().getContentResolver().openOutputStream(uri)) {
+                        if (output == null) throw new IllegalStateException("Не удалось открыть файл для записи");
+                        output.write(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    }
+                    Toast.makeText(getParentActivity(), "Настройки Ferrum экспортированы", Toast.LENGTH_LONG).show();
+                } else {
+                    StringBuilder json = new StringBuilder();
+                    try (java.io.InputStream input = getParentActivity().getContentResolver().openInputStream(uri)) {
+                        if (input == null) throw new IllegalStateException("Не удалось открыть файл");
+                        byte[] buffer = new byte[4096];
+                        int count;
+                        while ((count = input.read(buffer)) != -1) {
+                            if (json.length() + count > 128 * 1024) throw new IllegalArgumentException("Файл настроек слишком большой");
+                            json.append(new String(buffer, 0, count, java.nio.charset.StandardCharsets.UTF_8));
+                        }
+                    }
+                    FerrumConfig.importPortableSettings(getParentActivity(), json.toString());
+                    FerrumConfig.applyAccentTheme(getParentActivity());
+                    Toast.makeText(getParentActivity(), "Настройки импортированы. Перезапусти экран профиля для обновления баннера и обводки.", Toast.LENGTH_LONG).show();
+                }
+            } catch (Exception e) {
+                Toast.makeText(getParentActivity(), "Ошибка переноса настроек: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+            return;
+        }
         if (requestCode == REQUEST_SCAN && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
             FerrumAntivirus.scan(getParentActivity(), data.getData(), result -> {
                 StringBuilder message = new StringBuilder();
