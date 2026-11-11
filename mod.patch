@@ -1,6 +1,6 @@
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java b/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
---- a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java	2026-11-11 04:30:09.251108144 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java	2026-11-11 04:30:09.056908033 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java	2026-11-11 05:34:32.566750274 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java	2026-11-11 05:34:32.521371885 +0000
 @@ -26,8 +26,8 @@
      public static boolean NO_SCOPED_STORAGE = Build.VERSION.SDK_INT <= 29;
      public static String BUILD_VERSION_STRING = BuildConfig.BUILD_VERSION_STRING;
@@ -13,8 +13,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java b/
      // SafetyNet key for Google Identity SDK, set it to empty to disable
      public static String SAFETYNET_KEY = "AIzaSyDqt8P-7F7CPCseMkOiVRgb1LY8RN1bvH8";
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
---- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 04:30:08.611108121 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 04:30:08.283108109 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 05:34:32.406750264 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java	2026-11-11 05:34:31.957492608 +0000
 @@ -11412,6 +11412,9 @@
      }
  
@@ -25,10 +25,42 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesControlle
          if (action < 0 || action >= sendingTypings.length || dialogId == 0) {
              return false;
          }
+@@ -14593,6 +14596,9 @@
+     }
+ 
+     private void completeReadTask(ReadTask task) {
++        if (ModConfig.isNoRead()) {
++            return;
++        }
+         if (task.replyId != 0 && task.monoForumPeerId == 0) {
+             TLRPC.TL_messages_readDiscussion req = new TLRPC.TL_messages_readDiscussion();
+             req.msg_id = (int) task.replyId;
+@@ -17634,6 +17640,10 @@
+     }
+ 
+     protected void deleteMessagesByPush(long dialogId, ArrayList<Integer> ids, long channelId) {
++        if (ModConfig.isSaveDeleted()) {
++            ModDeletedMessages.remember(currentAccount, channelId, ids);
++            return;
++        }
+         getMessagesStorage().getStorageQueue().postRunnable(() -> {
+             AndroidUtilities.runOnUIThread(() -> {
+                 getNotificationCenter().postNotificationName(NotificationCenter.messagesDeleted, ids, channelId, false);
+@@ -21114,6 +21124,10 @@
+         LongSparseIntArray markAsReadMessagesOutboxFinal = markAsReadMessagesOutbox;
+         LongSparseArray<ArrayList<Integer>> markContentAsReadMessagesFinal = markContentAsReadMessages;
+         SparseIntArray markAsReadEncryptedFinal = markAsReadEncrypted;
++        if (deletedMessages != null && ModConfig.isSaveDeleted()) {
++            ModDeletedMessages.remember(currentAccount, deletedMessages);
++            deletedMessages = null;
++        }
+         LongSparseArray<ArrayList<Integer>> deletedMessagesFinal = deletedMessages;
+         LongSparseArray<ArrayList<Integer>> deletedQuickRepliesMessagesFinal = deletedQuickReplyMessages;
+         LongSparseArray<ArrayList<Integer>> scheduledDeletedMessagesFinal = scheduledDeletedMessages;
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java
 --- a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java	1970-01-01 00:00:00.000000000 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java	2026-11-11 04:30:08.619108121 +0000
-@@ -0,0 +1,69 @@
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java	2026-11-11 05:34:32.415549765 +0000
+@@ -0,0 +1,127 @@
 +package org.telegram.messenger;
 +
 +import android.content.Context;
@@ -37,7 +69,11 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/
 +/** Настройки мода. Хранятся в отдельном SharedPreferences-файле "modconfig". */
 +public class ModConfig {
 +
-+    public static final String MOD_VERSION = "1.0";
++    public static final String MOD_VERSION = "1.1";
++
++    public static final int STYLE_DEFAULT = 0;
++    public static final int STYLE_MATERIAL3 = 1;
++    public static final int STYLE_GLASS = 2;
 +
 +    private static final String PREFS = "modconfig";
 +
@@ -45,12 +81,20 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/
 +    public static final String KEY_CONFIRM_CALLS = "confirm_calls";
 +    public static final String KEY_HIDE_PREMIUM = "hide_premium";
 +    public static final String KEY_HIDE_STARS = "hide_stars";
++    public static final String KEY_LOCAL_PREMIUM = "local_premium";
++    public static final String KEY_SAVE_DELETED = "save_deleted";
++    public static final String KEY_NO_READ = "no_read_receipts";
++    private static final String KEY_STYLE = "ui_style";
 +
 +    private static volatile boolean loaded;
-+    private static boolean noTyping;
-+    private static boolean confirmCalls;
-+    private static boolean hidePremium;
-+    private static boolean hideStars;
++    private static volatile boolean noTyping;
++    private static volatile boolean confirmCalls;
++    private static volatile boolean hidePremium;
++    private static volatile boolean hideStars;
++    private static volatile boolean localPremium;
++    private static volatile boolean saveDeleted;
++    private static volatile boolean noRead;
++    private static volatile int style;
 +
 +    private static SharedPreferences prefs() {
 +        return ApplicationLoader.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
@@ -65,6 +109,10 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/
 +        confirmCalls = p.getBoolean(KEY_CONFIRM_CALLS, false);
 +        hidePremium = p.getBoolean(KEY_HIDE_PREMIUM, false);
 +        hideStars = p.getBoolean(KEY_HIDE_STARS, false);
++        localPremium = p.getBoolean(KEY_LOCAL_PREMIUM, false);
++        saveDeleted = p.getBoolean(KEY_SAVE_DELETED, false);
++        noRead = p.getBoolean(KEY_NO_READ, false);
++        style = p.getInt(KEY_STYLE, STYLE_DEFAULT);
 +        loaded = true;
 +    }
 +
@@ -75,6 +123,9 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/
 +            case KEY_CONFIRM_CALLS: return confirmCalls;
 +            case KEY_HIDE_PREMIUM: return hidePremium;
 +            case KEY_HIDE_STARS: return hideStars;
++            case KEY_LOCAL_PREMIUM: return localPremium;
++            case KEY_SAVE_DELETED: return saveDeleted;
++            case KEY_NO_READ: return noRead;
 +        }
 +        return false;
 +    }
@@ -87,20 +138,335 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModConfig.java b/
 +            case KEY_CONFIRM_CALLS: confirmCalls = value; break;
 +            case KEY_HIDE_PREMIUM: hidePremium = value; break;
 +            case KEY_HIDE_STARS: hideStars = value; break;
++            case KEY_LOCAL_PREMIUM: localPremium = value; break;
++            case KEY_SAVE_DELETED: saveDeleted = value; break;
++            case KEY_NO_READ: noRead = value; break;
 +            default: return false;
 +        }
 +        prefs().edit().putBoolean(key, value).apply();
 +        return value;
 +    }
 +
++    public static int getStyle() {
++        load();
++        return style;
++    }
++
++    /**
++     * Переключает стиль интерфейса. Liquid Glass включается через штатные флаги LiteMode
++     * (прежнее состояние флагов запоминается и возвращается при выходе из стиля).
++     * Material 3 включает палитру Material You (Android 12+), см. {@link ModTheme}.
++     */
++    public static void applyStyle(int newStyle) {
++        load();
++        int old = style;
++        if (old == newStyle) {
++            return;
++        }
++        SharedPreferences.Editor e = prefs().edit();
++        if (newStyle == STYLE_GLASS && old != STYLE_GLASS) {
++            e.putBoolean("glass_prev", LiteMode.isEnabledSetting(LiteMode.FLAG_LIQUID_GLASS));
++            e.putBoolean("blur_prev", LiteMode.isEnabledSetting(LiteMode.FLAG_CHAT_BLUR));
++            LiteMode.toggleFlag(LiteMode.FLAG_LIQUID_GLASS, true);
++            LiteMode.toggleFlag(LiteMode.FLAG_CHAT_BLUR, true);
++        } else if (old == STYLE_GLASS && newStyle != STYLE_GLASS) {
++            SharedPreferences p = prefs();
++            LiteMode.toggleFlag(LiteMode.FLAG_LIQUID_GLASS, p.getBoolean("glass_prev", false));
++            LiteMode.toggleFlag(LiteMode.FLAG_CHAT_BLUR, p.getBoolean("blur_prev", false));
++        }
++        e.putInt(KEY_STYLE, newStyle).apply();
++        style = newStyle;
++        ModTheme.invalidate();
++    }
++
 +    public static boolean isNoTyping() { load(); return noTyping; }
 +    public static boolean isConfirmCalls() { load(); return confirmCalls; }
 +    public static boolean isHidePremium() { load(); return hidePremium; }
 +    public static boolean isHideStars() { load(); return hideStars; }
++    public static boolean isLocalPremium() { load(); return localPremium; }
++    public static boolean isSaveDeleted() { load(); return saveDeleted; }
++    public static boolean isNoRead() { load(); return noRead; }
++    public static boolean isMaterial3() { load(); return style == STYLE_MATERIAL3; }
 +}
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModDeletedMessages.java b/TMessagesProj/src/main/java/org/telegram/messenger/ModDeletedMessages.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/ModDeletedMessages.java	1970-01-01 00:00:00.000000000 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModDeletedMessages.java	2026-11-11 05:34:32.422470760 +0000
+@@ -0,0 +1,86 @@
++package org.telegram.messenger;
++
++import android.content.Context;
++import android.content.SharedPreferences;
++import androidx.collection.LongSparseArray;
++
++import java.util.ArrayList;
++import java.util.HashSet;
++import java.util.Set;
++
++/**
++ * Хранит список сообщений, удалённых собеседником, но сохранённых у нас
++ * (при включённой функции «Сохранять удалённые сообщения»).
++ * Сами сообщения остаются в обычной базе Telegram, здесь только пометки.
++ */
++public class ModDeletedMessages {
++
++    private static final String PREFS = "mod_deleted_messages";
++    private static final String KEY = "ids";
++    private static final int MAX_ENTRIES = 50000;
++
++    private static Set<String> set;
++
++    private static synchronized Set<String> set() {
++        if (set == null) {
++            SharedPreferences p = ApplicationLoader.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
++            set = new HashSet<>(p.getStringSet(KEY, new HashSet<>()));
++        }
++        return set;
++    }
++
++    private static String key(int account, long dialogKey, int id) {
++        return account + "_" + dialogKey + "_" + id;
++    }
++
++    /** dialogKey: 0 для обычных чатов (id сообщений общие), -channelId для каналов и супергрупп. */
++    public static void remember(int account, LongSparseArray<ArrayList<Integer>> deleted) {
++        if (deleted == null) {
++            return;
++        }
++        boolean changed = false;
++        synchronized (ModDeletedMessages.class) {
++            Set<String> s = set();
++            for (int a = 0; a < deleted.size(); a++) {
++                long dialogKey = deleted.keyAt(a);
++                ArrayList<Integer> ids = deleted.valueAt(a);
++                if (ids == null) {
++                    continue;
++                }
++                for (int i = 0; i < ids.size(); i++) {
++                    changed |= s.add(key(account, dialogKey, ids.get(i)));
++                }
++            }
++            if (changed) {
++                if (s.size() > MAX_ENTRIES) {
++                    s.clear();
++                }
++                ApplicationLoader.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
++                        .edit().putStringSet(KEY, new HashSet<>(s)).apply();
++            }
++        }
++        if (changed) {
++            AndroidUtilities.runOnUIThread(() ->
++                    NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.modDeletedMessagesUpdated));
++        }
++    }
++
++    public static void remember(int account, long channelId, ArrayList<Integer> ids) {
++        LongSparseArray<ArrayList<Integer>> map = new LongSparseArray<>();
++        map.put(channelId == 0 ? 0 : -channelId, ids);
++        remember(account, map);
++    }
++
++    public static boolean isDeleted(MessageObject mo) {
++        if (mo == null || mo.messageOwner == null) {
++            return false;
++        }
++        long dialogKey = 0;
++        if (mo.messageOwner.peer_id != null && mo.messageOwner.peer_id.channel_id != 0) {
++            dialogKey = -mo.messageOwner.peer_id.channel_id;
++        }
++        synchronized (ModDeletedMessages.class) {
++            return set().contains(key(mo.currentAccount, dialogKey, mo.getId()));
++        }
++    }
++}
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModTheme.java b/TMessagesProj/src/main/java/org/telegram/messenger/ModTheme.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/ModTheme.java	1970-01-01 00:00:00.000000000 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModTheme.java	2026-11-11 05:34:32.418983746 +0000
+@@ -0,0 +1,77 @@
++package org.telegram.messenger;
++
++import android.content.Context;
++import android.os.Build;
++import android.util.SparseIntArray;
++
++import org.telegram.ui.ActionBar.Theme;
++
++/**
++ * Стиль «Material 3»: подменяет ключевые цвета темы цветами системной палитры Material You
++ * (Android 12+). Тона соответствуют ролям M3: primary, primaryContainer, surface и т.д.
++ */
++public class ModTheme {
++
++    private static SparseIntArray light;
++    private static SparseIntArray dark;
++
++    public static synchronized void invalidate() {
++        light = null;
++        dark = null;
++    }
++
++    /** @return цвет или 0, если ключ не переопределяется. */
++    public static int getColor(int key, boolean isDark) {
++        if (Build.VERSION.SDK_INT < 31) {
++            return 0;
++        }
++        SparseIntArray map = isDark ? dark : light;
++        if (map == null) {
++            map = build(isDark);
++        }
++        return map.get(key, 0);
++    }
++
++    private static synchronized SparseIntArray build(boolean isDark) {
++        SparseIntArray map = new SparseIntArray();
++        try {
++            Context c = ApplicationLoader.applicationContext;
++            // роли M3
++            int primary = isDark ? c.getColor(android.R.color.system_accent1_200) : c.getColor(android.R.color.system_accent1_600);
++            int container = isDark ? c.getColor(android.R.color.system_accent1_700) : c.getColor(android.R.color.system_accent1_100);
++            int containerHi = isDark ? c.getColor(android.R.color.system_accent1_600) : c.getColor(android.R.color.system_accent1_200);
++            int onContainer = isDark ? c.getColor(android.R.color.system_accent1_100) : c.getColor(android.R.color.system_accent1_900);
++            int onContainerVar = isDark ? c.getColor(android.R.color.system_accent1_200) : c.getColor(android.R.color.system_accent1_700);
++            int surface = isDark ? c.getColor(android.R.color.system_neutral1_900) : c.getColor(android.R.color.system_neutral1_10);
++            int surfaceDim = isDark ? c.getColor(android.R.color.system_neutral1_1000) : c.getColor(android.R.color.system_neutral1_50);
++
++            map.put(Theme.key_chats_actionBackground, container);
++            map.put(Theme.key_chats_actionPressedBackground, containerHi);
++            map.put(Theme.key_chats_actionIcon, onContainer);
++
++            map.put(Theme.key_windowBackgroundWhiteBlueText, primary);
++            map.put(Theme.key_windowBackgroundWhiteBlueHeader, primary);
++            map.put(Theme.key_dialogTextBlue, primary);
++            map.put(Theme.key_dialogButton, primary);
++            map.put(Theme.key_switchTrackChecked, primary);
++            map.put(Theme.key_switch2TrackChecked, primary);
++
++            map.put(Theme.key_chat_outBubble, container);
++            map.put(Theme.key_chat_outBubbleSelected, containerHi);
++            map.put(Theme.key_chat_messageTextOut, onContainer);
++            map.put(Theme.key_chat_outTimeText, onContainerVar);
++            map.put(Theme.key_chat_messageLinkOut, onContainerVar);
++
++            map.put(Theme.key_windowBackgroundWhite, surface);
++            map.put(Theme.key_windowBackgroundGray, surfaceDim);
++        } catch (Throwable t) {
++            FileLog.e(t);
++        }
++        if (isDark) {
++            dark = map;
++        } else {
++            light = map;
++        }
++        return map;
++    }
++}
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/ModUtils.java b/TMessagesProj/src/main/java/org/telegram/messenger/ModUtils.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/ModUtils.java	1970-01-01 00:00:00.000000000 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ModUtils.java	2026-11-11 05:34:32.425844771 +0000
+@@ -0,0 +1,28 @@
++package org.telegram.messenger;
++
++import android.app.AlarmManager;
++import android.app.PendingIntent;
++import android.content.Context;
++import android.content.Intent;
++
++public class ModUtils {
++
++    /** Перезапускает приложение (нужно после смены стиля интерфейса). */
++    public static void restartApp() {
++        try {
++            Context context = ApplicationLoader.applicationContext;
++            Intent intent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
++            if (intent == null) {
++                return;
++            }
++            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
++            PendingIntent pi = PendingIntent.getActivity(context, 7291, intent,
++                    PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
++            AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
++            am.set(AlarmManager.RTC, System.currentTimeMillis() + 400, pi);
++            System.exit(0);
++        } catch (Throwable t) {
++            FileLog.e(t);
++        }
++    }
++}
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/NotificationCenter.java b/TMessagesProj/src/main/java/org/telegram/messenger/NotificationCenter.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/NotificationCenter.java	2026-11-11 05:34:32.510750271 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/NotificationCenter.java	2026-11-11 05:34:32.429408283 +0000
+@@ -385,6 +385,7 @@
+     public static final int webBrowserSettingsUpdate = totalEvents++;
+     public static final int communityPendingRequestsUpdate = totalEvents++;
+     public static final int communitySwitchedCollapsed = totalEvents++;
++    public static final int modDeletedMessagesUpdated = totalEvents++;
+ 
+     public static boolean alreadyLogged;
+ 
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java b/TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java	2026-11-11 05:34:32.517769213 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java	2026-11-11 05:34:32.515704093 +0000
+@@ -577,6 +577,9 @@
+         if (user == null) {
+             return false;
+         }
++        if (ModConfig.isLocalPremium()) {
++            return true;
++        }
+         return user.premium;
+     }
+ 
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java b/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java	2026-11-11 05:34:33.294750317 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java	2026-11-11 05:34:33.231553288 +0000
+@@ -9123,6 +9123,12 @@
+     }
+ 
+     public static int getColor(int key, boolean[] isDefault, boolean ignoreAnimation) {
++        if (org.telegram.messenger.ModConfig.isMaterial3()) {
++            final int modColor = org.telegram.messenger.ModTheme.getColor(key, isCurrentThemeDark());
++            if (modColor != 0) {
++                return modColor;
++            }
++        }
+         if (SharedConfig.compactMode) {
+             // compact mode swaps some message colors for its own keys, see getCompactColor
+             final Integer compactColor = getCompactColor(key, null);
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java b/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java	2026-11-11 05:34:33.222750313 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java	2026-11-11 05:34:33.103663453 +0000
+@@ -15664,6 +15664,9 @@
+                 currentTimeString = TextUtils.concat(formatString(R.string.MessageScheduledRepeatSeconds, period), ", ", currentTimeString);
+             }
+         }
++        if (currentTimeString != null && org.telegram.messenger.ModDeletedMessages.isDeleted(currentMessageObject)) {
++            currentTimeString = TextUtils.concat("\uD83D\uDDD1 ", getString(R.string.ModDeletedMark), ", ", currentTimeString);
++        }
+         timeTextWidth = timeWidth = (int) Math.ceil(Theme.chat_timePaint.measureText(currentTimeString, 0, currentTimeString == null ? 0 : currentTimeString.length()));
+         if (currentMessageObject.scheduled && currentMessageObject.messageOwner.date == 0x7FFFFFFE || currentMessageObject.notime) {
+             timeWidth -= dp(8);
+diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java	2026-11-11 05:34:33.094750305 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java	2026-11-11 05:34:33.036079943 +0000
+@@ -2896,6 +2896,7 @@
+             .add(NotificationCenter.loadingMessagesFailed)
+             .add(NotificationCenter.didUpdateConnectionState)
+             .add(NotificationCenter.updateInterfaces)
++            .add(NotificationCenter.modDeletedMessagesUpdated)
+             .add(NotificationCenter.updateDefaultSendAsPeer)
+             .add(NotificationCenter.userIsPremiumBlockedUpadted)
+             .add(NotificationCenter.didLoadSendAsPeers)
+@@ -22725,6 +22726,8 @@
+             if (chatActivityEnterView != null) {
+                 chatActivityEnterView.updateSendButtonPaid();
+             }
++        } else if (id == NotificationCenter.modDeletedMessagesUpdated) {
++            updateVisibleRows();
+         } else if (id == NotificationCenter.updateInterfaces) {
+             int updateMask = (Integer) args[0];
+             if ((updateMask & MessagesController.UPDATE_MASK_NAME) != 0 || (updateMask & MessagesController.UPDATE_MASK_CHAT_NAME) != 0 || (updateMask & MessagesController.UPDATE_MASK_EMOJI_STATUS) != 0) {
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java b/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java
---- a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 04:30:08.783108127 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 04:30:08.627198880 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 05:34:32.782750287 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelper.java	2026-11-11 05:34:32.572546811 +0000
 @@ -74,7 +74,25 @@
  
  	private static final int VOIP_SUPPORT_ID = 4244000;
@@ -129,8 +495,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/Components/voip/VoIPHelp
  			return;
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 --- a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java	1970-01-01 00:00:00.000000000 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java	2026-11-11 04:30:08.788063521 +0000
-@@ -0,0 +1,217 @@
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java	2026-11-11 05:34:32.789509098 +0000
+@@ -0,0 +1,301 @@
 +package org.telegram.ui;
 +
 +import android.content.Context;
@@ -144,8 +510,10 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +
 +import org.telegram.messenger.LocaleController;
 +import org.telegram.messenger.ModConfig;
++import org.telegram.messenger.ModUtils;
 +import org.telegram.messenger.R;
 +import org.telegram.ui.ActionBar.ActionBar;
++import org.telegram.ui.ActionBar.AlertDialog;
 +import org.telegram.ui.ActionBar.BaseFragment;
 +import org.telegram.ui.Cells.HeaderCell;
 +import org.telegram.ui.Cells.TextCheckCell;
@@ -162,17 +530,23 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +    private static final int TYPE_INFO = 2;
 +    private static final int TYPE_VALUE = 3;
 +
-+    private static final int ROW_PRIVACY_HEADER = 0;
-+    private static final int ROW_NO_TYPING = 1;
-+    private static final int ROW_CONFIRM_CALLS = 2;
-+    private static final int ROW_PRIVACY_INFO = 3;
-+    private static final int ROW_UI_HEADER = 4;
-+    private static final int ROW_HIDE_PREMIUM = 5;
-+    private static final int ROW_HIDE_STARS = 6;
-+    private static final int ROW_UI_INFO = 7;
-+    private static final int ROW_ABOUT_HEADER = 8;
-+    private static final int ROW_VERSION = 9;
-+    private static final int ROW_COUNT = 10;
++    private static final int ROW_APPEARANCE_HEADER = 0;
++    private static final int ROW_STYLE = 1;
++    private static final int ROW_STYLE_INFO = 2;
++    private static final int ROW_FUNCTIONS_HEADER = 3;
++    private static final int ROW_LOCAL_PREMIUM = 4;
++    private static final int ROW_SAVE_DELETED = 5;
++    private static final int ROW_NO_READ = 6;
++    private static final int ROW_NO_TYPING = 7;
++    private static final int ROW_CONFIRM_CALLS = 8;
++    private static final int ROW_FUNCTIONS_INFO = 9;
++    private static final int ROW_UI_HEADER = 10;
++    private static final int ROW_HIDE_PREMIUM = 11;
++    private static final int ROW_HIDE_STARS = 12;
++    private static final int ROW_UI_INFO = 13;
++    private static final int ROW_ABOUT_HEADER = 14;
++    private static final int ROW_VERSION = 15;
++    private static final int ROW_COUNT = 16;
 +
 +    private RecyclerListView listView;
 +    private ListAdapter adapter;
@@ -219,16 +593,68 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +            case ROW_CONFIRM_CALLS: return ModConfig.KEY_CONFIRM_CALLS;
 +            case ROW_HIDE_PREMIUM: return ModConfig.KEY_HIDE_PREMIUM;
 +            case ROW_HIDE_STARS: return ModConfig.KEY_HIDE_STARS;
++            case ROW_LOCAL_PREMIUM: return ModConfig.KEY_LOCAL_PREMIUM;
++            case ROW_SAVE_DELETED: return ModConfig.KEY_SAVE_DELETED;
++            case ROW_NO_READ: return ModConfig.KEY_NO_READ;
 +        }
 +        return null;
 +    }
 +
++    private static String styleName(int style) {
++        switch (style) {
++            case ModConfig.STYLE_MATERIAL3: return LocaleController.getString(R.string.ModStyleMaterial3);
++            case ModConfig.STYLE_GLASS: return LocaleController.getString(R.string.ModStyleGlass);
++        }
++        return LocaleController.getString(R.string.ModStyleDefault);
++    }
++
 +    private void onRowClicked(View view, int position) {
++        if (position == ROW_STYLE) {
++            showStyleDialog();
++            return;
++        }
 +        String key = keyFor(position);
 +        if (key != null && view instanceof TextCheckCell) {
 +            boolean value = ModConfig.toggle(key);
 +            ((TextCheckCell) view).setChecked(value);
++            if (position == ROW_LOCAL_PREMIUM) {
++                showRestartDialog();
++            }
 +        }
++    }
++
++    private void showStyleDialog() {
++        if (getParentActivity() == null) {
++            return;
++        }
++        CharSequence[] items = new CharSequence[]{
++                styleName(ModConfig.STYLE_DEFAULT),
++                styleName(ModConfig.STYLE_MATERIAL3),
++                styleName(ModConfig.STYLE_GLASS)
++        };
++        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
++        builder.setTitle(LocaleController.getString(R.string.ModStyle));
++        builder.setItems(items, (dialog, which) -> {
++            ModConfig.applyStyle(which);
++            if (adapter != null) {
++                adapter.notifyItemChanged(ROW_STYLE);
++            }
++            showRestartDialog();
++        });
++        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
++        showDialog(builder.create());
++    }
++
++    private void showRestartDialog() {
++        if (getParentActivity() == null) {
++            return;
++        }
++        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
++        builder.setTitle(LocaleController.getString(R.string.ModRestartTitle));
++        builder.setMessage(LocaleController.getString(R.string.ModRestartText));
++        builder.setPositiveButton(LocaleController.getString(R.string.ModRestartNow), (dialog, which) -> ModUtils.restartApp());
++        builder.setNegativeButton(LocaleController.getString(R.string.ModRestartLater), null);
++        showDialog(builder.create());
 +    }
 +
 +    private class ListAdapter extends RecyclerListView.SelectionAdapter {
@@ -245,7 +671,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +
 +        @Override
 +        public boolean isEnabled(RecyclerView.ViewHolder holder) {
-+            return holder.getItemViewType() == TYPE_CHECK;
++            int position = holder.getAdapterPosition();
++            return holder.getItemViewType() == TYPE_CHECK || position == ROW_STYLE;
 +        }
 +
 +        @NonNull
@@ -273,13 +700,17 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +            switch (holder.getItemViewType()) {
 +                case TYPE_HEADER: {
 +                    HeaderCell cell = (HeaderCell) holder.itemView;
-+                    if (position == ROW_PRIVACY_HEADER) {
-+                        cell.setText(LocaleController.getString(R.string.ModHeaderPrivacy));
++                    int title;
++                    if (position == ROW_APPEARANCE_HEADER) {
++                        title = R.string.ModHeaderAppearance;
++                    } else if (position == ROW_FUNCTIONS_HEADER) {
++                        title = R.string.ModHeaderFunctions;
 +                    } else if (position == ROW_UI_HEADER) {
-+                        cell.setText(LocaleController.getString(R.string.ModHeaderInterface));
++                        title = R.string.ModHeaderInterface;
 +                    } else {
-+                        cell.setText(LocaleController.getString(R.string.ModHeaderAbout));
++                        title = R.string.ModHeaderAbout;
 +                    }
++                    cell.setText(LocaleController.getString(title));
 +                    break;
 +                }
 +                case TYPE_CHECK: {
@@ -287,7 +718,13 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +                    String key = keyFor(position);
 +                    int title;
 +                    boolean divider = true;
-+                    if (position == ROW_NO_TYPING) {
++                    if (position == ROW_LOCAL_PREMIUM) {
++                        title = R.string.ModLocalPremium;
++                    } else if (position == ROW_SAVE_DELETED) {
++                        title = R.string.ModSaveDeleted;
++                    } else if (position == ROW_NO_READ) {
++                        title = R.string.ModNoRead;
++                    } else if (position == ROW_NO_TYPING) {
 +                        title = R.string.ModNoTyping;
 +                    } else if (position == ROW_CONFIRM_CALLS) {
 +                        title = R.string.ModConfirmCalls;
@@ -303,16 +740,24 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +                }
 +                case TYPE_VALUE: {
 +                    TextSettingsCell cell = (TextSettingsCell) holder.itemView;
-+                    cell.setTextAndValue(LocaleController.getString(R.string.ModVersion), ModConfig.MOD_VERSION, false);
++                    if (position == ROW_STYLE) {
++                        cell.setTextAndValue(LocaleController.getString(R.string.ModStyle), styleName(ModConfig.getStyle()), false);
++                    } else {
++                        cell.setTextAndValue(LocaleController.getString(R.string.ModVersion), ModConfig.MOD_VERSION, false);
++                    }
 +                    break;
 +                }
 +                default: {
 +                    TextInfoPrivacyCell cell = (TextInfoPrivacyCell) holder.itemView;
-+                    if (position == ROW_PRIVACY_INFO) {
-+                        cell.setText(LocaleController.getString(R.string.ModPrivacyInfo));
++                    int text;
++                    if (position == ROW_STYLE_INFO) {
++                        text = R.string.ModStyleInfo;
++                    } else if (position == ROW_FUNCTIONS_INFO) {
++                        text = R.string.ModFunctionsInfo;
 +                    } else {
-+                        cell.setText(LocaleController.getString(R.string.ModInterfaceInfo));
++                        text = R.string.ModInterfaceInfo;
 +                    }
++                    cell.setText(LocaleController.getString(text));
 +                    break;
 +                }
 +            }
@@ -321,15 +766,20 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +        @Override
 +        public int getItemViewType(int position) {
 +            switch (position) {
-+                case ROW_PRIVACY_HEADER:
++                case ROW_APPEARANCE_HEADER:
++                case ROW_FUNCTIONS_HEADER:
 +                case ROW_UI_HEADER:
 +                case ROW_ABOUT_HEADER:
 +                    return TYPE_HEADER;
++                case ROW_LOCAL_PREMIUM:
++                case ROW_SAVE_DELETED:
++                case ROW_NO_READ:
 +                case ROW_NO_TYPING:
 +                case ROW_CONFIRM_CALLS:
 +                case ROW_HIDE_PREMIUM:
 +                case ROW_HIDE_STARS:
 +                    return TYPE_CHECK;
++                case ROW_STYLE:
 +                case ROW_VERSION:
 +                    return TYPE_VALUE;
 +                default:
@@ -349,8 +799,8 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/ModSettingsActivity.java
 +    }
 +}
 diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java
---- a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 04:30:09.051108136 +0000
-+++ b/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 04:30:08.791777651 +0000
+--- a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 05:34:33.026750301 +0000
++++ b/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java	2026-11-11 05:34:32.793038128 +0000
 @@ -76,6 +76,7 @@
  import org.telegram.messenger.LocaleController;
  import org.telegram.messenger.MediaDataController;
@@ -392,9 +842,9 @@ diff -ruN a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java b/
      }
  
 diff -ruN a/TMessagesProj/src/main/res/values/strings.xml b/TMessagesProj/src/main/res/values/strings.xml
---- a/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 04:30:09.855108165 +0000
-+++ b/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 04:30:09.587108156 +0000
-@@ -11678,4 +11678,18 @@
+--- a/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 05:34:33.358750321 +0000
++++ b/TMessagesProj/src/main/res/values/strings.xml	2026-11-11 05:34:33.303824206 +0000
+@@ -11678,4 +11678,34 @@
      <string name="FpnvConsentCountry">Country</string>
      <string name="FpnvConsentMccMnc">MCC / MNC</string>
      <string name="FpnvConsentPhoneNumber">Phone Number</string>
@@ -412,11 +862,27 @@ diff -ruN a/TMessagesProj/src/main/res/values/strings.xml b/TMessagesProj/src/ma
 +    <string name="ModVersion">Mod version</string>
 +    <string name="ModCallConfirmTitle">Call</string>
 +    <string name="ModCallConfirmText">Are you sure you want to call this user?</string>
++    <string name="ModHeaderAppearance">Appearance</string>
++    <string name="ModHeaderFunctions">Features</string>
++    <string name="ModStyle">Interface style</string>
++    <string name="ModStyleDefault">Standard</string>
++    <string name="ModStyleMaterial3">Material 3</string>
++    <string name="ModStyleGlass">Liquid Glass</string>
++    <string name="ModStyleInfo">Material 3 uses system Material You colors (Android 12+). Liquid Glass enables the built-in glass effect and blur (Android 13+).</string>
++    <string name="ModRestartTitle">Restart required</string>
++    <string name="ModRestartText">Restart the app to apply the changes.</string>
++    <string name="ModRestartNow">Restart</string>
++    <string name="ModRestartLater">Later</string>
++    <string name="ModLocalPremium">Local Telegram Premium</string>
++    <string name="ModSaveDeleted">Keep deleted messages</string>
++    <string name="ModNoRead">Read without marking as read</string>
++    <string name="ModFunctionsInfo">Local Premium unlocks Premium interface features on this device only; server-side features still require a real subscription. Deleted messages stay in the chat with a mark. Reading quietly does not send read receipts to the other person.</string>
++    <string name="ModDeletedMark">deleted</string>
  </resources>
 diff -ruN a/TMessagesProj/src/main/res/values-ru/strings.xml b/TMessagesProj/src/main/res/values-ru/strings.xml
---- a/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 04:30:09.379108148 +0000
-+++ b/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 04:30:09.255108144 +0000
-@@ -263,4 +263,18 @@
+--- a/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 05:34:33.570750334 +0000
++++ b/TMessagesProj/src/main/res/values-ru/strings.xml	2026-11-11 05:34:33.367931585 +0000
+@@ -263,4 +263,34 @@
      <string name="RemindTodayAt">\'Отправить сегодня в\' HH:mm</string>
      <string name="RemindDayAt">\'Отправить\' d MMM \'в\' HH:mm</string>
      <string name="RemindDayYearAt">\'Напомнить\' d MMM yyyy \'в\' HH:mm</string>
@@ -434,5 +900,21 @@ diff -ruN a/TMessagesProj/src/main/res/values-ru/strings.xml b/TMessagesProj/src
 +    <string name="ModVersion">Версия мода</string>
 +    <string name="ModCallConfirmTitle">Звонок</string>
 +    <string name="ModCallConfirmText">Вы уверены, что хотите позвонить этому пользователю?</string>
++    <string name="ModHeaderAppearance">Внешний вид</string>
++    <string name="ModHeaderFunctions">Функции</string>
++    <string name="ModStyle">Стиль интерфейса</string>
++    <string name="ModStyleDefault">Стандартный</string>
++    <string name="ModStyleMaterial3">Material 3</string>
++    <string name="ModStyleGlass">Liquid Glass</string>
++    <string name="ModStyleInfo">Material 3 использует системные цвета Material You (Android 12+). Liquid Glass включает встроенный эффект стекла и размытие (Android 13+).</string>
++    <string name="ModRestartTitle">Нужен перезапуск</string>
++    <string name="ModRestartText">Перезапустите приложение, чтобы применить изменения.</string>
++    <string name="ModRestartNow">Перезапустить</string>
++    <string name="ModRestartLater">Позже</string>
++    <string name="ModLocalPremium">Локальный Telegram Premium</string>
++    <string name="ModSaveDeleted">Сохранять удалённые сообщения</string>
++    <string name="ModNoRead">Читать без отметки о прочтении</string>
++    <string name="ModFunctionsInfo">Локальный Premium открывает премиум-функции интерфейса только на этом устройстве; серверные возможности по-прежнему требуют настоящей подписки. Удалённые сообщения остаются в чате с пометкой. Тихое чтение не отправляет собеседнику отметку о прочтении.</string>
++    <string name="ModDeletedMark">удалено</string>
  </resources>
 \ No newline at end of file
