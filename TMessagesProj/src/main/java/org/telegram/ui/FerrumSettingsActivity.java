@@ -21,6 +21,8 @@ import android.widget.Toast;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FerrumConfig;
 import org.telegram.messenger.FerrumAntivirus;
+import org.telegram.messenger.ModConfig;
+import org.telegram.messenger.ModTheme;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
@@ -297,9 +299,52 @@ public class FerrumSettingsActivity extends BaseFragment {
     }
 
     private void addLegacySection(Context context) {
-        addHeader(context, "ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ");
-        addCard(context, "Расширенные возможности Ferrum", "Настройки приватности, сообщений, звонков, локального Premium и дополнительные цветовые палитры.");
-        addButton(context, "Открыть дополнительные функции", v -> presentFragment(new ModSettingsActivity()));
+        addHeader(context, "ПРИВАТНОСТЬ И СООББЩЕНИЯ");
+        addCard(context, "Дополнительная приватность", "Управление статусом набора текста и отметками о прочтении.");
+        addModSwitch(context, "Не отправлять статус «печатает…»", ModConfig.KEY_NO_TYPING, false);
+        addModSwitch(context, "Читать без отметки о прочтении", ModConfig.KEY_NO_READ, false);
+        addModSwitch(context, "Сохранять удалённые сообщения", ModConfig.KEY_SAVE_DELETED, false);
+        addHeader(context, "ЗВОНКИ И TELEGRAM");
+        addModSwitch(context, "Подтверждать исходящие звонки", ModConfig.KEY_CONFIRM_CALLS, false);
+        addModSwitch(context, "Локальный Telegram Premium", ModConfig.KEY_LOCAL_PREMIUM, true);
+        addModSwitch(context, "Скрыть Telegram Premium", ModConfig.KEY_HIDE_PREMIUM, false);
+        addModSwitch(context, "Скрыть Telegram Stars", ModConfig.KEY_HIDE_STARS, false);
+        addValue(context, "Локальный Premium меняет только отображение на устройстве. Серверные функции требуют настоящую подписку.");
+        addHeader(context, "ДОПОЛНИТЕЛЬНОЕ ОФОРМЛЕНИЕ");
+        addModSwitch(context, "Отключить размытие и Liquid Glass", ModConfig.KEY_NO_BLUR, true);
+        addButton(context, "Выбрать цветовую палитру", v -> showModColorPackDialog(context));
+        addValue(context, "Палитры меняют основные цвета интерфейса Telegram. Для отключения размытия может потребоваться перезапуск.");
+    }
+
+    private void addModSwitch(Context context, String title, String key, boolean restartRequired) {
+        android.widget.Switch toggle = new android.widget.Switch(context);
+        toggle.setText(title);
+        toggle.setTextSize(14);
+        toggle.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        toggle.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(5), AndroidUtilities.dp(4), AndroidUtilities.dp(5));
+        toggle.setMinHeight(AndroidUtilities.dp(52));
+        toggle.setChecked(ModConfig.get(key));
+        toggle.setOnCheckedChangeListener((button, checked) -> {
+            ModConfig.toggle(key);
+            if (restartRequired) {
+                Toast.makeText(context, "Изменение сохранено. Для полного применения перезапусти Ferrum.", Toast.LENGTH_LONG).show();
+            }
+        });
+        content.addView(toggle, new LinearLayout.LayoutParams(-1, -2));
+    }
+
+    private void showModColorPackDialog(Context context) {
+        String[] packs = new String[] {"Стандартная", "Голубая", "Розовая", "Мятная", "Сиреневая", "Персиковая", "Графитовая"};
+        new android.app.AlertDialog.Builder(context)
+                .setTitle("Цветовая палитра")
+                .setSingleChoiceItems(packs, ModConfig.getColorPack(), (dialog, which) -> {
+                    ModConfig.setColorPack(which);
+                    ModTheme.applyLive();
+                    dialog.dismiss();
+                    Toast.makeText(context, "Палитра применена", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Отмена", null)
+                .show();
     }
 
     private void addSyncSection(Context context) {
