@@ -76,6 +76,7 @@ import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MediaDataController;
 import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.ModConfig;
 import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
@@ -814,10 +815,10 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(UItem.asShadow(null));
         }
 
-        if (!getMessagesController().premiumFeaturesBlocked()) {
+        if (!getMessagesController().premiumFeaturesBlocked() && !ModConfig.isHidePremium()) {
             items.add(SettingCell.Factory.of(11, 0xFFB659FF, 0xFF617CFF, R.drawable.settings_premium, getString(R.string.TelegramPremium)));
         }
-        if (getMessagesController().starsPurchaseAvailable()) {
+        if (getMessagesController().starsPurchaseAvailable() && !ModConfig.isHideStars()) {
             StarsController c = StarsController.getInstance(currentAccount);
             long balance = c.getBalance().amount;
             items.add(SettingCell.Factory.of(12, 0xFFEFA612, 0xFFE77512, R.drawable.settings_stars, getString(R.string.TelegramStars), null, c.balanceAvailable() && balance > 0 ? StarsIntroActivity.formatStarsAmount(c.getBalance(), 0.85f, ' ') : ""));
