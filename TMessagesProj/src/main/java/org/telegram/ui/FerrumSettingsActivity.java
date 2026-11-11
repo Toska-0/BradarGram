@@ -469,8 +469,7 @@ public class FerrumSettingsActivity extends BaseFragment {
     }
 
     @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
+    public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
         if (resultCode == Activity.RESULT_OK && data != null && data.getData() != null
                 && (requestCode == REQUEST_EXPORT || requestCode == REQUEST_IMPORT)) {
             Uri uri = data.getData();
