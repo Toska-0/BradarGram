@@ -290,6 +290,7 @@ public class FerrumSettingsActivity extends BaseFragment {
             View checked = providerGroup.findViewById(checkedId);
             if (checked instanceof RadioButton) {
                 FerrumConfig.setAiProvider(context, String.valueOf(checked.getTag()));
+                aiKey.setText(FerrumConfig.getAiApiKey(context));
             }
         });
     }
