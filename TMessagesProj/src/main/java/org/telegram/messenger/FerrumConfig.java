@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import org.telegram.ui.ActionBar.Theme;
+import org.json.JSONObject;
 
 /**
  * Local configuration storage for Ferrum-specific features.
@@ -147,6 +148,44 @@ public final class FerrumConfig {
 
     public static void setAntivirusEnabled(Context context, boolean enabled) {
         prefs(context).edit().putBoolean(KEY_ANTIVIRUS_ENABLED, enabled).apply();
+    }
+
+    /** Exports portable preferences. Image URI is intentionally excluded because it is device-local. */
+    public static String exportPortableSettings(Context context) throws Exception {
+        JSONObject json = new JSONObject();
+        json.put("format", "ferrum-settings");
+        json.put("version", 1);
+        json.put("accentColor", getAccentColor(context));
+        json.put("bannerScale", getBannerScale(context));
+        json.put("bannerOffsetX", getBannerOffsetX(context));
+        json.put("bannerOffsetY", getBannerOffsetY(context));
+        json.put("avatarRingEnabled", isAvatarRingEnabled(context));
+        json.put("avatarRingColor", getAvatarRingColor(context));
+        json.put("avatarRingWidth", getAvatarRingWidth(context));
+        json.put("avatarRingStyle", getAvatarRingStyle(context));
+        json.put("antivirusEnabled", isAntivirusEnabled(context));
+        return json.toString(2);
+    }
+
+    /** Imports only known, validated presentation preferences. Existing banner URI remains local. */
+    public static void importPortableSettings(Context context, String source) throws Exception {
+        JSONObject json = new JSONObject(source);
+        if (!"ferrum-settings".equals(json.optString("format")) || json.optInt("version", -1) != 1) {
+            throw new IllegalArgumentException("Неподдерживаемый формат файла Ferrum");
+        }
+        SharedPreferences.Editor edit = prefs(context).edit();
+        edit.putInt(KEY_ACCENT_COLOR, json.optInt("accentColor", DEFAULT_ACCENT_COLOR));
+        edit.putFloat(KEY_BANNER_SCALE, clamp((float) json.optDouble("bannerScale", DEFAULT_BANNER_SCALE), 0.5f, 3.0f));
+        edit.putFloat(KEY_BANNER_OFFSET_X, clamp((float) json.optDouble("bannerOffsetX", 0), -1.0f, 1.0f));
+        edit.putFloat(KEY_BANNER_OFFSET_Y, clamp((float) json.optDouble("bannerOffsetY", 0), -1.0f, 1.0f));
+        edit.putBoolean(KEY_AVATAR_RING_ENABLED, json.optBoolean("avatarRingEnabled", false));
+        edit.putInt(KEY_AVATAR_RING_COLOR, json.optInt("avatarRingColor", DEFAULT_AVATAR_RING_COLOR));
+        edit.putFloat(KEY_AVATAR_RING_WIDTH, clamp((float) json.optDouble("avatarRingWidth", DEFAULT_AVATAR_RING_WIDTH), 1.0f, 12.0f));
+        int style = json.optInt("avatarRingStyle", AVATAR_RING_STYLE_SOLID);
+        if (style < AVATAR_RING_STYLE_SOLID || style > AVATAR_RING_STYLE_DASHED) style = AVATAR_RING_STYLE_SOLID;
+        edit.putInt(KEY_AVATAR_RING_STYLE, style);
+        edit.putBoolean(KEY_ANTIVIRUS_ENABLED, json.optBoolean("antivirusEnabled", false));
+        edit.apply();
     }
 
     private static float clamp(float value, float min, float max) {
