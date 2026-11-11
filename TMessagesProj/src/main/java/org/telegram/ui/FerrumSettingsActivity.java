@@ -67,6 +67,7 @@ public class FerrumSettingsActivity extends BaseFragment {
         addBannerSection(context);
         addAvatarSection(context);
         addSecuritySection(context);
+        addLegacySection(context);
         addSyncSection(context);
 
         fragmentView = scroll;
@@ -293,6 +294,12 @@ public class FerrumSettingsActivity extends BaseFragment {
                 aiKey.setText(FerrumConfig.getAiApiKey(context));
             }
         });
+    }
+
+    private void addLegacySection(Context context) {
+        addHeader(context, "ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ");
+        addCard(context, "Расширенные возможности Ferrum", "Настройки приватности, сообщений, звонков, локального Premium и дополнительные цветовые палитры.");
+        addButton(context, "Открыть дополнительные функции", v -> presentFragment(new ModSettingsActivity()));
     }
 
     private void addSyncSection(Context context) {

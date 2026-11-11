@@ -16,9 +16,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Apply mod patch
-        run: |
-          patch -p1 --forward --no-backup-if-mismatch < mod.patch
 
       - uses: actions/setup-java@v4
         with:
