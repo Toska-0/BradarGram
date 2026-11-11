@@ -299,7 +299,7 @@ public class FerrumSettingsActivity extends BaseFragment {
     }
 
     private void addLegacySection(Context context) {
-        addHeader(context, "ПРИВАТНОСТЬ И СООББЩЕНИЯ");
+        addHeader(context, "ПРИВАТНОСТЬ И СООБЩЕНИЯ");
         addCard(context, "Дополнительная приватность", "Управление статусом набора текста и отметками о прочтении.");
         addModSwitch(context, "Не отправлять статус «печатает…»", ModConfig.KEY_NO_TYPING, false);
         addModSwitch(context, "Читать без отметки о прочтении", ModConfig.KEY_NO_READ, false);
@@ -312,7 +312,17 @@ public class FerrumSettingsActivity extends BaseFragment {
         addValue(context, "Локальный Premium меняет только отображение на устройстве. Серверные функции требуют настоящую подписку.");
         addHeader(context, "ДОПОЛНИТЕЛЬНОЕ ОФОРМЛЕНИЕ");
         addModSwitch(context, "Отключить размытие и Liquid Glass", ModConfig.KEY_NO_BLUR, true);
+        TextView blurLabel = addValue(context, "Предпросмотр размытия");
+        ModBlurPreviewView blurPreview = new ModBlurPreviewView(context);
+        blurPreview.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        blurPreview.setBlurDisabled(ModConfig.isNoBlur());
+        content.addView(blurPreview, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(136)));
         addButton(context, "Выбрать цветовую палитру", v -> showModColorPackDialog(context));
+        TextView colorLabel = addValue(context, "Предпросмотр цветовой палитры");
+        ModColorPreviewView colorPreview = new ModColorPreviewView(context);
+        colorPreview.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        colorPreview.setPack(ModConfig.getColorPack());
+        content.addView(colorPreview, new LinearLayout.LayoutParams(-1, AndroidUtilities.dp(220)));
         addValue(context, "Палитры меняют основные цвета интерфейса Telegram. Для отключения размытия может потребоваться перезапуск.");
     }
 
