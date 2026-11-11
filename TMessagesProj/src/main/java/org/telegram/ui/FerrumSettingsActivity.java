@@ -3,6 +3,7 @@ package org.telegram.ui;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 import android.text.InputType;
 import android.view.View;
@@ -154,7 +155,7 @@ public class FerrumSettingsActivity extends BaseFragment {
         info("Облачная синхронизация пока не подключена. Баннер профиля не переносится. Экспорт не содержит токены и переписки.");
 
         header("О FERRUM");
-        value(0, "Версия Ferrum", FerrumConfig.VERSION);
+        value(0, "Версия Ferrum", ModConfig.MOD_VERSION);
     }
 
     private String percent(float value) { return Math.round(value * 100) + "%"; }
