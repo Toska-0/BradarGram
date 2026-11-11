@@ -16,6 +16,7 @@ import android.widget.Toast;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FerrumConfig;
+import org.telegram.messenger.FerrumAntivirus;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
@@ -27,6 +28,7 @@ import org.telegram.ui.ActionBar.Theme;
 public class FerrumSettingsActivity extends BaseFragment {
 
     private static final int REQUEST_BANNER = 7101;
+    private static final int REQUEST_SCAN = 7102;
     private LinearLayout content;
     private TextView bannerStatus;
     private TextView ringWidthLabel;
@@ -253,6 +255,22 @@ public class FerrumSettingsActivity extends BaseFragment {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_SCAN && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
+            FerrumAntivirus.scan(getParentActivity(), data.getData(), result -> {
+                StringBuilder message = new StringBuilder();
+                message.append("Файл: ").append(result.fileName).append("\\n");
+                message.append("Размер: ").append(result.size).append(" байт\\n");
+                message.append("SHA-256: ").append(result.sha256).append("\\n");
+                message.append("Уровень риска: ").append(result.riskLabel()).append("\\n\\n");
+                for (String finding : result.findings) message.append("• ").append(finding).append("\\n");
+                new android.app.AlertDialog.Builder(getParentActivity())
+                        .setTitle("Результат проверки")
+                        .setMessage(message.toString())
+                        .setPositiveButton("Закрыть", null)
+                        .show();
+            });
+            return;
+        }
         if (requestCode == REQUEST_BANNER && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
             Uri uri = data.getData();
             try {
