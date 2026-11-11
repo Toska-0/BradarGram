@@ -102,7 +102,7 @@ public class FerrumSettingsActivity extends BaseFragment {
 
     private void addBannerSection(Context context) {
         addHeader(context, "БАННЕР ПРОФИЛЯ");
-        addCard(context, "Локальный баннер", "Изображение выбирается из галереи и пока отображается только как сохранённая настройка Ferrum.");
+        addCard(context, "Локальный баннер", "Изображение выбирается из галереи и отображается в шапке твоего профиля на этом устройстве.");
         bannerStatus = addValue(context, bannerName());
         addButton(context, "Выбрать изображение", v -> {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -125,7 +125,7 @@ public class FerrumSettingsActivity extends BaseFragment {
 
     private void addAvatarSection(Context context) {
         addHeader(context, "АВАТАР");
-        addCard(context, "Обводка аватара", "Параметры сохраняются локально. Подключение отрисовки обводки в профиле — следующий этап интеграции.");
+        addCard(context, "Обводка аватара", "Обводка отображается вокруг аватара твоего профиля. Цвет, толщину и стиль можно менять ниже.");
         android.widget.Switch enabled = new android.widget.Switch(context);
         enabled.setText("Включить обводку");
         enabled.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
