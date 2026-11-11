@@ -113,6 +113,30 @@ public class ModTheme {
         map.put(Theme.key_windowBackgroundWhite, c[SURFACE]);
         map.put(Theme.key_windowBackgroundGray, c[SURFACE_DIM]);
 
+        // нижняя панель навигации (glass-табы ссылаются на эти ключи), кнопка отправки
+        map.put(Theme.key_chat_messagePanelSend, c[PRIMARY]);
+
+        // акцентные тексты и значения в настройках/диалогах
+        map.put(Theme.key_windowBackgroundWhiteValueText, c[PRIMARY]);
+        map.put(Theme.key_windowBackgroundWhiteBlueText2, c[PRIMARY]);
+        map.put(Theme.key_windowBackgroundWhiteBlueText3, c[PRIMARY]);
+        map.put(Theme.key_windowBackgroundWhiteBlueText4, c[PRIMARY]);
+        map.put(Theme.key_windowBackgroundWhiteBlueText5, c[PRIMARY]);
+        map.put(Theme.key_windowBackgroundWhiteBlueText6, c[PRIMARY]);
+        map.put(Theme.key_windowBackgroundWhiteBlueText7, c[PRIMARY]);
+        map.put(Theme.key_dialogTextBlue2, c[PRIMARY]);
+        map.put(Theme.key_dialogTextBlue4, c[PRIMARY]);
+
+        // кнопки-«таблетки», прогресс, галочки проверок
+        map.put(Theme.key_featuredStickers_addButton, c[PRIMARY]);
+        map.put(Theme.key_dialog_inlineProgress, c[PRIMARY]);
+        map.put(Theme.key_chats_verifiedBackground, c[PRIMARY]);
+        map.put(Theme.key_profile_verifiedBackground, c[PRIMARY]);
+
+        // вторичные оттенки: линия ответа у исходящих, приглушённый счётчик
+        map.put(Theme.key_chat_outReplyLine, c[ON_CONTAINER_VAR]);
+        map.put(Theme.key_chats_unreadCounterMuted, c[ON_CONTAINER_VAR]);
+
         if (isDark) {
             darkMaps[pack] = map;
         } else {
