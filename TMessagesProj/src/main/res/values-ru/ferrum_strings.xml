@@ -83,4 +83,5 @@
     <string name="FerrumCrashTitle">Ferrum упал</string>
     <string name="FerrumCrashInfo">Отправь этот лог разработчику.</string>
     <string name="FerrumCrashCopy">Скопировать лог</string>
+    <string name="FerrumScanContext">Проверить антивирусом</string>
 </resources>
