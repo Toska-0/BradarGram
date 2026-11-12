@@ -1,0 +1,55 @@
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java
+@@ -1233,6 +1233,36 @@
+         private Paint paint = new Paint();
+         private ImageView ferrumBannerView;
+ 
++        // Ferrum: smooth fade of the banner image into the header background (like a cover photo)
++        private android.graphics.LinearGradient ferrumFadeGradient;
++        private final Paint ferrumFadePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
++        private int ferrumFadeWidth = -1;
++        private int ferrumFadeColor;
++
++        @Override
++        protected void dispatchDraw(@NonNull android.graphics.Canvas canvas) {
++            super.dispatchDraw(canvas);
++            if (ferrumBannerView != null) {
++                final int w = getMeasuredWidth();
++                final int h = AndroidUtilities.dp(262);
++                if (ferrumFadeWidth != w || ferrumFadeColor != currentColor) {
++                    ferrumFadeWidth = w;
++                    ferrumFadeColor = currentColor;
++                    ferrumFadeGradient = new android.graphics.LinearGradient(
++                            0, h - AndroidUtilities.dp(96),
++                            0, h,
++                            new int[]{0x00000000, currentColor},
++                            new float[]{0f, 1f},
++                            android.graphics.Shader.TileMode.CLAMP);
++                    ferrumFadePaint.setShader(ferrumFadeGradient);
++                }
++                canvas.save();
++                canvas.clipRect(0, h - AndroidUtilities.dp(96), w, h);
++                canvas.drawRect(0, h - AndroidUtilities.dp(96), w, h, ferrumFadePaint);
++                canvas.restore();
++            }
++        }
++
+         public TopView(Context context) {
+             super(context);
+             setWillNotDraw(false);
+@@ -1243,13 +1273,13 @@
+                         ferrumBannerView = new ImageView(context);
+                         ferrumBannerView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                         ferrumBannerView.setImageURI(android.net.Uri.parse(bannerUri));
+-                        ferrumBannerView.setAlpha(0.48f);
++                        ferrumBannerView.setAlpha(1.0f);
+                         float scale = FerrumConfig.getBannerScale(context);
+                         ferrumBannerView.setScaleX(scale);
+                         ferrumBannerView.setScaleY(scale);
+                         ferrumBannerView.setTranslationX(AndroidUtilities.dp(60) * FerrumConfig.getBannerOffsetX(context));
+                         ferrumBannerView.setTranslationY(AndroidUtilities.dp(45) * FerrumConfig.getBannerOffsetY(context));
+-                        addView(ferrumBannerView, new FrameLayout.LayoutParams(-1, -1));
++                        addView(ferrumBannerView, new FrameLayout.LayoutParams(-1, AndroidUtilities.dp(262)));
+                     } catch (Exception e) {
+                         FileLog.e(e);
+                     }
