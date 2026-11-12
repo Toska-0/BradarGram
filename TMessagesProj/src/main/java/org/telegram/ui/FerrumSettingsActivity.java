@@ -226,7 +226,7 @@ public class FerrumSettingsActivity extends BaseFragment {
             textView.setText(item.title);
             iconView.setImageResource(item.icon);
             textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-            iconView.setColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, 0.75f), android.graphics.PorterDuff.Mode.SRC_IN);
+            iconView.setColorFilter(Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), 0.75f), android.graphics.PorterDuff.Mode.SRC_IN);
         }
 
         @Override
