@@ -79,4 +79,8 @@
     <string name="FerrumRiskHigh">High</string>
     <string name="FerrumRiskMedium">Elevated</string>
     <string name="FerrumRiskLow">Low</string>
+    <!-- Crash report -->
+    <string name="FerrumCrashTitle">Ferrum crashed</string>
+    <string name="FerrumCrashInfo">Please send this log to the developer.</string>
+    <string name="FerrumCrashCopy">Copy log</string>
 </resources>

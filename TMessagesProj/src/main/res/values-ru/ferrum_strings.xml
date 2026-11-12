@@ -79,4 +79,8 @@
     <string name="FerrumRiskHigh">Высокий</string>
     <string name="FerrumRiskMedium">Повышенный</string>
     <string name="FerrumRiskLow">Низкий</string>
+    <!-- Отчёт о падении -->
+    <string name="FerrumCrashTitle">Ferrum упал</string>
+    <string name="FerrumCrashInfo">Отправь этот лог разработчику.</string>
+    <string name="FerrumCrashCopy">Скопировать лог</string>
 </resources>
