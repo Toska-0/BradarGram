@@ -116,6 +116,15 @@ public class ModTheme {
         // нижняя панель навигации (glass-табы ссылаются на эти ключи), кнопка отправки
         map.put(Theme.key_chat_messagePanelSend, c[PRIMARY]);
 
+        // нижние стеклянные вкладки главного экрана (GlassTabView)
+        map.put(Theme.key_glass_tabSelected, c[PRIMARY]);
+        map.put(Theme.key_glass_tabSelectedText, c[ON_CONTAINER_VAR]);
+        map.put(Theme.key_glass_tabUnselected, c[ON_CONTAINER_VAR]);
+
+        // фирменный синий Telegram: счётчики на табах и прочие брендовые акценты
+        map.put(Theme.key_telegram_color, c[PRIMARY]);
+        map.put(Theme.key_telegram_color_text, c[ON_CONTAINER_VAR]);
+
         // акцентные тексты и значения в настройках/диалогах
         map.put(Theme.key_windowBackgroundWhiteValueText, c[PRIMARY]);
         map.put(Theme.key_windowBackgroundWhiteBlueText2, c[PRIMARY]);
