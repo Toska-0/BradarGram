@@ -54,6 +54,8 @@ public class FerrumSettingsActivity extends BaseFragment {
     private static final int CHECK = 1;
     private static final int VALUE = 2;
     private static final int INFO = 3;
+    private static final int PREVIEW_BLUR = 4;
+    private static final int PREVIEW_COLOR = 5;
 
     private static final int ACCENT = 1, BANNER_PICK = 2, BANNER_REMOVE = 3,
             BANNER_SCALE = 4, BANNER_X = 5, BANNER_Y = 6,
@@ -139,7 +141,9 @@ public class FerrumSettingsActivity extends BaseFragment {
         header(LocaleController.getString(R.string.FerrumSectionAppearance));
         value(ACCENT, LocaleController.getString(R.string.FerrumAccentColor), LocaleController.getString(R.string.FerrumChange));
         check(NO_BLUR, LocaleController.getString(R.string.FerrumNoBlur), ModConfig.isNoBlur());
+        if (!isFiltering()) rows.add(new Row(PREVIEW_BLUR, 0, null, null, false));
         value(COLOR_PACK, LocaleController.getString(R.string.FerrumColorPalette), packName(ModConfig.getColorPack()));
+        if (!isFiltering()) rows.add(new Row(PREVIEW_COLOR, 0, null, null, false));
         info(LocaleController.getString(R.string.FerrumBlurRestartInfo));
 
         header(LocaleController.getString(R.string.FerrumSectionBanner));
@@ -316,7 +320,12 @@ public class FerrumSettingsActivity extends BaseFragment {
         @Override public int getItemViewType(int p){return rows.get(p).type;}
         @Override public boolean isEnabled(RecyclerView.ViewHolder h){int p=h.getAdapterPosition();return p>=0&&p<rows.size()&&(rows.get(p).type==CHECK||rows.get(p).type==VALUE);}
         @NonNull @Override public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent,int type){
-            View v=type==CHECK?new TextCheckCell(context):type==VALUE?new TextSettingsCell(context):new TextInfoPrivacyCell(context);
+            View v;
+            if (type==CHECK) v=new TextCheckCell(context);
+            else if (type==VALUE) v=new TextSettingsCell(context);
+            else if (type==PREVIEW_BLUR) v=new ModBlurPreviewView(context);
+            else if (type==PREVIEW_COLOR) v=new ModColorPreviewView(context);
+            else v=new TextInfoPrivacyCell(context);
             v.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT,RecyclerView.LayoutParams.WRAP_CONTENT));
             return new RecyclerListView.Holder(v);
         }
@@ -324,6 +333,8 @@ public class FerrumSettingsActivity extends BaseFragment {
             Row r=rows.get(p); boolean divider=p+1<rows.size()&&(rows.get(p+1).type==CHECK||rows.get(p+1).type==VALUE);
             if(r.type==CHECK)((TextCheckCell)h.itemView).setTextAndCheck(r.title,r.checked,divider);
             else if(r.type==VALUE)((TextSettingsCell)h.itemView).setTextAndValue(r.title,r.value==null?"":r.value,divider);
+            else if(r.type==PREVIEW_BLUR){h.itemView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));((ModBlurPreviewView)h.itemView).setBlurDisabled(ModConfig.isNoBlur());}
+            else if(r.type==PREVIEW_COLOR){h.itemView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));((ModColorPreviewView)h.itemView).setPack(ModConfig.getColorPack());}
             else {
                 TextInfoPrivacyCell shadowCell=(TextInfoPrivacyCell)h.itemView;
                 shadowCell.setText(r.title);
