@@ -5,8 +5,10 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Shader;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.util.TypedValue;
@@ -32,11 +34,14 @@ import java.io.InputStream;
 
 /**
  * Полноэкранный редактор баннера профиля: масштаб щипком и перетаскивание жестом,
- * как в редакторе аватара. Показывает баннер ровно так, как он выглядит в профиле.
+ * как в редакторе аватара. Показывает баннер ровно так, как он выглядит в профиле:
+ * непрозрачная полоса высотой 262dp с плавным затуханием в цвет фона внизу.
  */
 public class FerrumBannerEditor extends BaseFragment {
 
     private static final int DONE_ITEM = 1;
+    private static final int BANNER_HEIGHT_DP = 262;
+    private static final int FADE_HEIGHT_DP = 96;
 
     private BannerEditView editView;
     private float scale, offsetX, offsetY;
@@ -155,12 +160,18 @@ public class FerrumBannerEditor extends BaseFragment {
         finishFragment();
     }
 
-    /** Рисует баннер той же математикой, что и TopView в профиле: center-crop, масштаб, сдвиг. */
+    /**
+     * Рисует баннер той же математикой, что и TopView в профиле: непрозрачная полоса
+     * высотой 262dp, center-crop, масштаб и сдвиг вокруг центра полосы, затухание снизу.
+     */
     private class BannerEditView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+        private final Paint fadePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Matrix matrix = new Matrix();
         private final ScaleGestureDetector scaleDetector;
         private float lastX, lastY;
+        private int fadeWidth = -1;
+        private int fadeColor;
 
         BannerEditView(Context context) {
             super(context);
@@ -176,20 +187,42 @@ public class FerrumBannerEditor extends BaseFragment {
 
         @Override
         protected void onDraw(Canvas canvas) {
-            canvas.drawColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+            int bgColor = Theme.getColor(Theme.key_windowBackgroundWhite);
+            canvas.drawColor(bgColor);
             if (bitmap == null) {
                 return;
             }
-            paint.setAlpha(122);
-            float vw = getWidth(), vh = getHeight();
+            float vw = getWidth();
+            float h = AndroidUtilities.dp(BANNER_HEIGHT_DP);
             float bw = bitmap.getWidth(), bh = bitmap.getHeight();
-            float base = Math.max(vw / bw, vh / bh);
+            // center-crop внутри полосы высотой h, как ImageView CENTER_CROP в TopView
+            float base = Math.max(vw / bw, h / bh);
             matrix.reset();
             matrix.postScale(base, base);
-            matrix.postTranslate((vw - bw * base) / 2f, (vh - bh * base) / 2f);
-            matrix.postScale(scale, scale, vw / 2f, vh / 2f);
+            matrix.postTranslate((vw - bw * base) / 2f, (h - bh * base) / 2f);
+            matrix.postScale(scale, scale, vw / 2f, h / 2f);
             matrix.postTranslate(AndroidUtilities.dp(60) * offsetX, AndroidUtilities.dp(45) * offsetY);
+            paint.setAlpha(255);
+            int save = canvas.save();
+            canvas.clipRect(0, 0, vw, h);
             canvas.drawBitmap(bitmap, matrix, paint);
+            canvas.restoreToCount(save);
+
+            // затухание в цвет фона, как dispatchDraw в TopView
+            if (fadeWidth != vw || fadeColor != bgColor) {
+                fadeWidth = vw;
+                fadeColor = bgColor;
+                fadePaint.setShader(new LinearGradient(
+                        0, h - AndroidUtilities.dp(FADE_HEIGHT_DP),
+                        0, h,
+                        new int[]{0x00000000, bgColor},
+                        new float[]{0f, 1f},
+                        Shader.TileMode.CLAMP));
+            }
+            canvas.save();
+            canvas.clipRect(0, h - AndroidUtilities.dp(FADE_HEIGHT_DP), vw, h);
+            canvas.drawRect(0, h - AndroidUtilities.dp(FADE_HEIGHT_DP), vw, h, fadePaint);
+            canvas.restore();
         }
 
         @Override
