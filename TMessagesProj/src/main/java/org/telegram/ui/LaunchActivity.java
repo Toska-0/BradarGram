@@ -533,17 +533,25 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
             }
         });
         setupActionBarLayout();
-        if (UserConfig.getInstance(currentAccount).isClientActivated()) {
+        final String lastCrash = FerrumCrashCatcher.consumeLastCrash(this);
+        if (FerrumCrashCatcher.getCrashCount(this) >= 2) {
+            // safe mode: the app crashes repeatedly, reset the color pack (it hooks early startup)
+            org.telegram.messenger.ModConfig.setColorPack(0);
+            FerrumCrashCatcher.clearCrashCount(this);
+        }
+        if (lastCrash == null && UserConfig.getInstance(currentAccount).isClientActivated()) {
             FerrumSplashView ferrumSplash = new FerrumSplashView(this);
             frameLayout.addView(ferrumSplash, new FrameLayout.LayoutParams(-1, -1));
             ferrumSplash.postDelayed(() -> ferrumSplash.animate().alpha(0f).setDuration(220)
                     .withEndAction(() -> frameLayout.removeView(ferrumSplash)).start(), 1450);
         }
-
-        final String lastCrash = FerrumCrashCatcher.consumeLastCrash(this);
         if (lastCrash != null) {
             AndroidUtilities.runOnUIThread(() -> {
                 try {
+                    try {
+                        android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("ferrum_crash", lastCrash));
+                    } catch (Throwable ignore) { }
                     String shortTrace = lastCrash.length() > 900 ? lastCrash.substring(0, 900) + "\n…" : lastCrash;
                     AlertDialog.Builder builder = new AlertDialog.Builder(LaunchActivity.this);
                     builder.setTitle(LocaleController.getString(R.string.FerrumCrashTitle));
@@ -558,8 +566,9 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                     builder.setNegativeButton(LocaleController.getString(R.string.FerrumClose), null);
                     builder.show();
                 } catch (Throwable ignore) { }
-            }, 2500);
+            }, 400);
         }
+        AndroidUtilities.runOnUIThread(() -> FerrumCrashCatcher.clearCrashCount(LaunchActivity.this), 60000);
         drawerLayoutContainer.setParentActionBarLayout(actionBarLayout);
         actionBarLayout.setDrawerLayoutContainer(drawerLayoutContainer);
         actionBarLayout.setFragmentStack(mainFragmentsStack);
