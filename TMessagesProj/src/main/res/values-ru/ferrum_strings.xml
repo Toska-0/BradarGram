@@ -11,6 +11,8 @@
     <string name="FerrumSectionTelegram">Telegram</string>
     <string name="FerrumSectionSync">Синхронизация</string>
     <string name="FerrumSectionAbout">О Ferrum</string>
+    <string name="FerrumCategoryProfile">Профиль</string>
+    <string name="FerrumVersionFormat">Версия %1$s</string>
     <string name="FerrumAccentColor">Акцентный цвет</string>
     <string name="FerrumChange">Изменить</string>
     <string name="FerrumNoBlur">Отключить размытие и Liquid Glass</string>

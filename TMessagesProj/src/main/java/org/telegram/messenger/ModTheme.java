@@ -151,6 +151,16 @@ public class ModTheme {
         map.put(Theme.key_dialogTextBlue2, c[PRIMARY]);
         map.put(Theme.key_dialogTextBlue4, c[PRIMARY]);
 
+        // остатки синего: ссылки во входящих, кнопки диалогов, поиск, галочки, онлайн-индикатор
+        map.put(Theme.key_chat_messageLinkIn, c[PRIMARY]);
+        map.put(Theme.key_chat_inReplyLine, c[PRIMARY]);
+        map.put(Theme.key_radioBackgroundChecked, c[PRIMARY]);
+        map.put(Theme.key_checkboxCheck, c[ON_PRIMARY]);
+        map.put(Theme.key_windowBackgroundWhiteBlueButton, c[PRIMARY]);
+        map.put(Theme.key_dialogSearchText, c[PRIMARY]);
+        map.put(Theme.key_chat_fieldOverlayText, c[PRIMARY]);
+        map.put(Theme.key_chats_onlineCircle, c[PRIMARY]);
+
         // кнопки-«таблетки», прогресс, галочки проверок
         map.put(Theme.key_featuredStickers_addButton, c[PRIMARY]);
         map.put(Theme.key_dialog_inlineProgress, c[PRIMARY]);

@@ -11,6 +11,8 @@
     <string name="FerrumSectionTelegram">Telegram</string>
     <string name="FerrumSectionSync">Backup and sync</string>
     <string name="FerrumSectionAbout">About Ferrum</string>
+    <string name="FerrumCategoryProfile">Profile</string>
+    <string name="FerrumVersionFormat">Version %1$s</string>
     <string name="FerrumAccentColor">Accent color</string>
     <string name="FerrumChange">Change</string>
     <string name="FerrumNoBlur">Disable blur and Liquid Glass</string>
