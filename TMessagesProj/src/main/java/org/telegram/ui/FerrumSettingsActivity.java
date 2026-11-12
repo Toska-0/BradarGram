@@ -59,10 +59,10 @@ public class FerrumSettingsActivity extends BaseFragment {
     private static final int PREVIEW_PROFILE = 6;
 
     private static final int ACCENT = 1, BANNER_PICK = 2, BANNER_REMOVE = 3,
-            BANNER_SCALE = 4, BANNER_X = 5, BANNER_Y = 6,
+            BANNER_CONFIGURE = 4,
             AVATAR_RING = 7, AVATAR_WIDTH = 8, AVATAR_COLOR = 9, AVATAR_STYLE = 10,
             AV_ENGINE = 11, AI_PROVIDER = 12, AI_KEY = 13, VT_KEY = 14,
-            EXPORT = 15, IMPORT = 16, SCAN = 17, COLOR_PACK = 18;
+            EXPORT = 15, IMPORT = 16, SCAN = 17, COLOR_PACK = 18, UI_STYLE = 19;
     private static final int NO_TYPING = 30, NO_READ = 31, SAVE_DELETED = 32,
             CONFIRM_CALLS = 33, LOCAL_PREMIUM = 34, HIDE_PREMIUM = 35,
             HIDE_STARS = 36, NO_BLUR = 37;
@@ -117,7 +117,7 @@ public class FerrumSettingsActivity extends BaseFragment {
         listView.setVerticalScrollBarEnabled(false);
         listView.setAdapter(adapter = new ListAdapter(context));
         listView.setOnItemClickListener((view, position) -> {
-            if (position >= 0 && position < rows.size()) onRowClick(rows.get(position));
+            if (position >= 0 && position < rows.size()) onRowClick(view, rows.get(position));
         });
         frame.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         return fragmentView;
@@ -145,15 +145,15 @@ public class FerrumSettingsActivity extends BaseFragment {
         if (!isFiltering()) rows.add(new Row(PREVIEW_BLUR, 0, null, null, false));
         value(COLOR_PACK, LocaleController.getString(R.string.FerrumColorPalette), packName(ModConfig.getColorPack()));
         if (!isFiltering()) rows.add(new Row(PREVIEW_COLOR, 0, null, null, false));
+        value(UI_STYLE, LocaleController.getString(R.string.FerrumUiStyle), uiPresetName(FerrumConfig.getUiPreset(c)));
         info(LocaleController.getString(R.string.FerrumBlurRestartInfo));
 
         header(LocaleController.getString(R.string.FerrumSectionBanner));
-        if (!isFiltering()) rows.add(new Row(PREVIEW_PROFILE, 0, null, null, false));
         value(BANNER_PICK, LocaleController.getString(R.string.FerrumBannerPick), LocaleController.getString(R.string.FerrumGallery));
-        value(BANNER_REMOVE, LocaleController.getString(R.string.FerrumBannerRemove), null);
-        value(BANNER_SCALE, LocaleController.getString(R.string.FerrumBannerScale), percent(FerrumConfig.getBannerScale(c)));
-        value(BANNER_X, LocaleController.getString(R.string.FerrumBannerX), percent(FerrumConfig.getBannerOffsetX(c)));
-        value(BANNER_Y, LocaleController.getString(R.string.FerrumBannerY), percent(FerrumConfig.getBannerOffsetY(c)));
+        if (FerrumConfig.getProfileBannerUri(c) != null) {
+            value(BANNER_CONFIGURE, LocaleController.getString(R.string.FerrumBannerConfigure), null);
+            value(BANNER_REMOVE, LocaleController.getString(R.string.FerrumBannerRemove), null);
+        }
 
         header(LocaleController.getString(R.string.FerrumSectionAvatar));
         if (!isFiltering()) rows.add(new Row(PREVIEW_PROFILE, 0, null, null, false));
@@ -194,18 +194,22 @@ public class FerrumSettingsActivity extends BaseFragment {
         value(0, LocaleController.getString(R.string.FerrumVersion), ModConfig.MOD_VERSION);
     }
 
-    private String percent(float value) { return Math.round(value * 100) + "%"; }
     private String masked(String key) { return key == null || key.isEmpty() ? LocaleController.getString(R.string.FerrumKeyNotSet) : "••••••••"; }
     private String packName(int pack) {
         if (pack < 0 || pack >= ModTheme.PACK_NAMES.length) pack = 0;
         return LocaleController.getString(ModTheme.PACK_NAMES[pack]);
+    }
+    private String uiPresetName(int preset) {
+        if (preset == FerrumConfig.UI_PRESET_FULL_WIDTH) return LocaleController.getString(R.string.FerrumUiPresetFullWidth);
+        if (preset == FerrumConfig.UI_PRESET_FLOATING) return LocaleController.getString(R.string.FerrumUiPresetFloating);
+        return LocaleController.getString(R.string.FerrumUiPresetDefault);
     }
     private String ringStyle(int style) {
         String[] names = {LocaleController.getString(R.string.FerrumRingSolid), LocaleController.getString(R.string.FerrumRingGradient), LocaleController.getString(R.string.FerrumRingDashed)};
         return style >= 0 && style < names.length ? names[style] : names[0];
     }
 
-    private void onRowClick(Row row) {
+    private void onRowClick(View cell, Row row) {
         Context c = getParentActivity();
         if (c == null) return;
         switch (row.id) {
@@ -219,18 +223,29 @@ public class FerrumSettingsActivity extends BaseFragment {
                         row.id == LOCAL_PREMIUM ? ModConfig.KEY_LOCAL_PREMIUM :
                         row.id == HIDE_PREMIUM ? ModConfig.KEY_HIDE_PREMIUM : ModConfig.KEY_HIDE_STARS;
                 boolean enabled = ModConfig.toggle(key);
+                if (cell instanceof TextCheckCell) ((TextCheckCell) cell).setChecked(enabled);
                 if (row.id == NO_BLUR || row.id == LOCAL_PREMIUM) showRestartDialog();
+                break;
+            }
+            case 40: {
+                boolean enabled = !FerrumConfig.isAntivirusEnabled(c);
+                FerrumConfig.setAntivirusEnabled(c, enabled);
+                if (cell instanceof TextCheckCell) ((TextCheckCell) cell).setChecked(enabled);
                 refresh();
                 break;
             }
-            case 40:
-                FerrumConfig.setAntivirusEnabled(c, !FerrumConfig.isAntivirusEnabled(c)); refresh(); break;
             case ACCENT: showAccentDialog(); break;
             case COLOR_PACK: showColorPackDialog(); break;
+            case UI_STYLE: showUiStyleDialog(); break;
             case BANNER_PICK: openDocument("image/*", REQUEST_BANNER, false); break;
+            case BANNER_CONFIGURE: presentFragment(new FerrumBannerEditor()); break;
             case BANNER_REMOVE: FerrumConfig.clearProfileBanner(c); refresh(); break;
-            case BANNER_SCALE: case BANNER_X: case BANNER_Y: showNumberDialog(row.id); break;
-            case AVATAR_RING: FerrumConfig.setAvatarRingEnabled(c, !FerrumConfig.isAvatarRingEnabled(c)); refresh(); break;
+            case AVATAR_RING: {
+                boolean enabled = !FerrumConfig.isAvatarRingEnabled(c);
+                FerrumConfig.setAvatarRingEnabled(c, enabled);
+                if (cell instanceof TextCheckCell) ((TextCheckCell) cell).setChecked(enabled);
+                break;
+            }
             case AVATAR_WIDTH: showAvatarWidthDialog(); break;
             case AVATAR_COLOR: showAvatarColorDialog(); break;
             case AVATAR_STYLE: showAvatarStyleDialog(); break;
@@ -253,6 +268,18 @@ public class FerrumSettingsActivity extends BaseFragment {
         b.setNegativeButton(LocaleController.getString(R.string.FerrumLater), null);
         showDialog(b.create());
     }
+    private void showUiStyleDialog() {
+        String[] names = {
+                LocaleController.getString(R.string.FerrumUiPresetDefault),
+                LocaleController.getString(R.string.FerrumUiPresetFullWidth),
+                LocaleController.getString(R.string.FerrumUiPresetFloating)
+        };
+        AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
+        b.setTitle(LocaleController.getString(R.string.FerrumUiStyle));
+        b.setItems(names, (d, which) -> { FerrumConfig.setUiPreset(getParentActivity(), which); refresh(); });
+        b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        showDialog(b.create());
+    }
     private void showAccentDialog() {
         final int[] colors = {0xFF6E9BFF,0xFF56C6A9,0xFFB58AFF,0xFFFF9B70,0xFFE879A8,0xFFE5B85C};
         String[] names = {LocaleController.getString(R.string.FerrumColorBlue),LocaleController.getString(R.string.FerrumColorMint),LocaleController.getString(R.string.FerrumColorLavender),LocaleController.getString(R.string.FerrumColorPeach),LocaleController.getString(R.string.FerrumColorPink),LocaleController.getString(R.string.FerrumColorGold)};
@@ -269,15 +296,6 @@ public class FerrumSettingsActivity extends BaseFragment {
         b.setItems(names, (d, which) -> { ModConfig.setColorPack(which); ModTheme.applyLive(); refresh(); });
         b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
         showDialog(b.create());
-    }
-    private void showNumberDialog(int id) {
-        Context c=getParentActivity();
-        EditText input=new EditText(c); input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
-        int current=id==BANNER_SCALE ? Math.round(FerrumConfig.getBannerScale(c)*100) : Math.round((id==BANNER_X?FerrumConfig.getBannerOffsetX(c):FerrumConfig.getBannerOffsetY(c))*100);
-        input.setText(String.valueOf(current));
-        AlertDialog.Builder b=new AlertDialog.Builder(c); b.setTitle(id==BANNER_SCALE?LocaleController.getString(R.string.FerrumBannerScaleTitle):LocaleController.getString(R.string.FerrumBannerOffset)); b.setView(input);
-        b.setPositiveButton(LocaleController.getString(R.string.OK), (d,w)->{ try { int v=Integer.parseInt(input.getText().toString()); if(id==BANNER_SCALE) FerrumConfig.setBannerScale(c,Math.max(50,Math.min(300,v))/100f); else if(id==BANNER_X) FerrumConfig.setBannerOffsetX(c,Math.max(-100,Math.min(100,v))/100f); else FerrumConfig.setBannerOffsetY(c,Math.max(-100,Math.min(100,v))/100f); refresh(); } catch(Exception ignored){} });
-        b.setNegativeButton(LocaleController.getString(R.string.Cancel),null); showDialog(b.create());
     }
     private void showAvatarWidthDialog() {
         EditText input=new EditText(getParentActivity()); input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL); input.setText(String.valueOf(FerrumConfig.getAvatarRingWidth(getParentActivity())));
