@@ -10,13 +10,14 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 /**
- * Saves uncaught crash stack traces to a small file so the next launch can show
+ * Saves uncaught crash stack traces to small files so the next launch can show
  * them to the user. Intentionally dependency-free: it must work even when the
  * rest of the app is broken.
  */
 public final class FerrumCrashCatcher {
 
     private static final String FILE_NAME = "ferrum_last_crash.txt";
+    private static final String COUNT_PREFS = "ferrum_crash";
     private static final int MAX_BYTES = 64 * 1024;
 
     private FerrumCrashCatcher() { }
@@ -32,15 +33,38 @@ public final class FerrumCrashCatcher {
         } catch (Throwable ignore) { }
     }
 
-    /** Returns the saved crash log (if any) and deletes the file. */
+    /** Number of crashes since the last successful (60s stable) session. */
+    public static int getCrashCount(Context context) {
+        try {
+            return context.getApplicationContext()
+                    .getSharedPreferences(COUNT_PREFS, Context.MODE_PRIVATE).getInt("count", 0);
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    public static void clearCrashCount(Context context) {
+        try {
+            context.getApplicationContext()
+                    .getSharedPreferences(COUNT_PREFS, Context.MODE_PRIVATE)
+                    .edit().remove("count").apply();
+        } catch (Throwable ignore) { }
+    }
+
+    /** Returns the saved crash log (if any) and deletes the files. */
     public static String consumeLastCrash(Context context) {
         try {
-            File file = new File(context.getApplicationContext().getFilesDir(), FILE_NAME);
+            Context app = context.getApplicationContext();
+            File file = new File(app.getFilesDir(), FILE_NAME);
             if (!file.exists()) {
                 return null;
             }
             byte[] bytes = readAll(file);
             file.delete();
+            File ext = app.getExternalFilesDir(null);
+            if (ext != null) {
+                new File(ext, FILE_NAME).delete();
+            }
             if (bytes == null || bytes.length == 0) {
                 return null;
             }
@@ -86,6 +110,18 @@ public final class FerrumCrashCatcher {
             try (FileOutputStream out = new FileOutputStream(new File(app.getFilesDir(), FILE_NAME))) {
                 out.write(data);
             }
+            try {
+                File ext = app.getExternalFilesDir(null);
+                if (ext != null) {
+                    try (FileOutputStream out = new FileOutputStream(new File(ext, FILE_NAME))) {
+                        out.write(data);
+                    }
+                }
+            } catch (Throwable ignore) { }
+            try {
+                app.getSharedPreferences(COUNT_PREFS, Context.MODE_PRIVATE)
+                        .edit().putInt("count", getCrashCount(app) + 1).apply();
+            } catch (Throwable ignore) { }
         } catch (Throwable ignore) { }
     }
 
