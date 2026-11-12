@@ -117,6 +117,7 @@ import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.FerrumConfig;
+import org.telegram.messenger.FerrumCrashCatcher;
 import org.telegram.messenger.FingerprintController;
 import org.telegram.messenger.FlagSecureReason;
 import org.telegram.messenger.GenericProvider;
@@ -455,6 +456,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         flagSecureReason = new FlagSecureReason(getWindow(), () -> SharedConfig.passcodeHash.length() > 0 && !SharedConfig.allowScreenCapture);
         flagSecureReason.attach();
 
+        FerrumCrashCatcher.install(this);
         super.onCreate(savedInstanceState);
         if (Build.VERSION.SDK_INT >= 24) {
             AndroidUtilities.isInMultiwindow = isInMultiWindowMode();
@@ -536,6 +538,27 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
             frameLayout.addView(ferrumSplash, new FrameLayout.LayoutParams(-1, -1));
             ferrumSplash.postDelayed(() -> ferrumSplash.animate().alpha(0f).setDuration(220)
                     .withEndAction(() -> frameLayout.removeView(ferrumSplash)).start(), 1450);
+        }
+
+        final String lastCrash = FerrumCrashCatcher.consumeLastCrash(this);
+        if (lastCrash != null) {
+            AndroidUtilities.runOnUIThread(() -> {
+                try {
+                    String shortTrace = lastCrash.length() > 900 ? lastCrash.substring(0, 900) + "\n…" : lastCrash;
+                    AlertDialog.Builder builder = new AlertDialog.Builder(LaunchActivity.this);
+                    builder.setTitle(LocaleController.getString(R.string.FerrumCrashTitle));
+                    builder.setMessage(shortTrace + "\n\n" + LocaleController.getString(R.string.FerrumCrashInfo));
+                    builder.setPositiveButton(LocaleController.getString(R.string.FerrumCrashCopy), (d, w) -> {
+                        try {
+                            android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                            cm.setPrimaryClip(android.content.ClipData.newPlainText("ferrum_crash", lastCrash));
+                            Toast.makeText(LaunchActivity.this, "OK", Toast.LENGTH_SHORT).show();
+                        } catch (Throwable ignore) { }
+                    });
+                    builder.setNegativeButton(LocaleController.getString(R.string.FerrumClose), null);
+                    builder.show();
+                } catch (Throwable ignore) { }
+            }, 2500);
         }
         drawerLayoutContainer.setParentActionBarLayout(actionBarLayout);
         actionBarLayout.setDrawerLayoutContainer(drawerLayoutContainer);
