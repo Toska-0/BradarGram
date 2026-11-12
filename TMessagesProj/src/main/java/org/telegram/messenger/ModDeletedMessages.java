@@ -27,8 +27,20 @@ public class ModDeletedMessages {
         if (cache == null) {
             cache = new LinkedHashSet<>();
             SharedPreferences p = ApplicationLoader.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-            String raw = p.getString(KEY, "");
-            if (!raw.isEmpty()) {
+            String raw = null;
+            try {
+                raw = p.getString(KEY, null);
+            } catch (ClassCastException e) {
+                // старая версия мода хранила ids как StringSet — мигрируем в строковый формат
+                try {
+                    java.util.Set<String> legacy = p.getStringSet(KEY, null);
+                    if (legacy != null) {
+                        cache.addAll(legacy);
+                    }
+                } catch (Throwable ignore) { }
+                p.edit().remove(KEY).apply();
+            }
+            if (raw != null && !raw.isEmpty()) {
                 for (String line : raw.split("\n")) {
                     if (!line.isEmpty()) {
                         cache.add(line);
@@ -52,6 +64,7 @@ public class ModDeletedMessages {
             return;
         }
         boolean changed = false;
+        try {
         synchronized (ModDeletedMessages.class) {
             LinkedHashSet<String> s = set();
             for (int a = 0; a < deleted.size(); a++) {
@@ -77,6 +90,9 @@ public class ModDeletedMessages {
         if (changed) {
             AndroidUtilities.runOnUIThread(() ->
                     NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.modDeletedMessagesUpdated));
+        }
+        } catch (Throwable t) {
+            FileLog.e(t);
         }
     }
 
