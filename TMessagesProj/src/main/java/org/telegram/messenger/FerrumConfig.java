@@ -27,6 +27,7 @@ public final class FerrumConfig {
     private static final String KEY_AVATAR_RING_COLOR = "avatar_ring_color";
     private static final String KEY_AVATAR_RING_WIDTH = "avatar_ring_width";
     private static final String KEY_AVATAR_RING_STYLE = "avatar_ring_style";
+    private static final String KEY_UI_PRESET = "ui_preset";
     private static final String KEY_ANTIVIRUS_ENABLED = "antivirus_enabled";
     private static final String KEY_ANTIVIRUS_ENGINE = "antivirus_engine";
     private static final String KEY_AI_PROVIDER = "antivirus_ai_provider";
@@ -42,6 +43,10 @@ public final class FerrumConfig {
     public static final int AVATAR_RING_STYLE_SOLID = 0;
     public static final int AVATAR_RING_STYLE_GRADIENT = 1;
     public static final int AVATAR_RING_STYLE_DASHED = 2;
+
+    public static final int UI_PRESET_DEFAULT = 0;
+    public static final int UI_PRESET_FULL_WIDTH = 1;
+    public static final int UI_PRESET_FLOATING = 2;
 
     private FerrumConfig() {
     }
@@ -95,7 +100,7 @@ public final class FerrumConfig {
     }
 
     public static void setBannerOffsetX(Context context, float offset) {
-        prefs(context).edit().putFloat(KEY_BANNER_OFFSET_X, clamp(offset, -1.0f, 1.0f)).apply();
+        prefs(context).edit().putFloat(KEY_BANNER_OFFSET_X, clamp(offset, -3.0f, 3.0f)).apply();
     }
 
     public static float getBannerOffsetY(Context context) {
@@ -103,7 +108,7 @@ public final class FerrumConfig {
     }
 
     public static void setBannerOffsetY(Context context, float offset) {
-        prefs(context).edit().putFloat(KEY_BANNER_OFFSET_Y, clamp(offset, -1.0f, 1.0f)).apply();
+        prefs(context).edit().putFloat(KEY_BANNER_OFFSET_Y, clamp(offset, -3.0f, 3.0f)).apply();
     }
 
     public static boolean isAvatarRingEnabled(Context context) {
@@ -145,6 +150,22 @@ public final class FerrumConfig {
             style = AVATAR_RING_STYLE_SOLID;
         }
         prefs(context).edit().putInt(KEY_AVATAR_RING_STYLE, style).apply();
+    }
+
+    /** Preset for the main screen layout: bottom navigation shape and search field corners. */
+    public static int getUiPreset(Context context) {
+        int preset = prefs(context).getInt(KEY_UI_PRESET, UI_PRESET_DEFAULT);
+        if (preset < UI_PRESET_DEFAULT || preset > UI_PRESET_FLOATING) {
+            return UI_PRESET_DEFAULT;
+        }
+        return preset;
+    }
+
+    public static void setUiPreset(Context context, int preset) {
+        if (preset < UI_PRESET_DEFAULT || preset > UI_PRESET_FLOATING) {
+            preset = UI_PRESET_DEFAULT;
+        }
+        prefs(context).edit().putInt(KEY_UI_PRESET, preset).apply();
     }
 
     public static boolean isAntivirusEnabled(Context context) {
@@ -260,6 +281,7 @@ public final class FerrumConfig {
         json.put("avatarRingColor", getAvatarRingColor(context));
         json.put("avatarRingWidth", getAvatarRingWidth(context));
         json.put("avatarRingStyle", getAvatarRingStyle(context));
+        json.put("uiPreset", getUiPreset(context));
         json.put("antivirusEnabled", isAntivirusEnabled(context));
         json.put("antivirusEngine", getAntivirusEngine(context));
         json.put("aiProvider", getAiProvider(context));
@@ -275,14 +297,17 @@ public final class FerrumConfig {
         SharedPreferences.Editor edit = prefs(context).edit();
         edit.putInt(KEY_ACCENT_COLOR, json.optInt("accentColor", DEFAULT_ACCENT_COLOR));
         edit.putFloat(KEY_BANNER_SCALE, clamp((float) json.optDouble("bannerScale", DEFAULT_BANNER_SCALE), 0.5f, 3.0f));
-        edit.putFloat(KEY_BANNER_OFFSET_X, clamp((float) json.optDouble("bannerOffsetX", 0), -1.0f, 1.0f));
-        edit.putFloat(KEY_BANNER_OFFSET_Y, clamp((float) json.optDouble("bannerOffsetY", 0), -1.0f, 1.0f));
+        edit.putFloat(KEY_BANNER_OFFSET_X, clamp((float) json.optDouble("bannerOffsetX", 0), -3.0f, 3.0f));
+        edit.putFloat(KEY_BANNER_OFFSET_Y, clamp((float) json.optDouble("bannerOffsetY", 0), -3.0f, 3.0f));
         edit.putBoolean(KEY_AVATAR_RING_ENABLED, json.optBoolean("avatarRingEnabled", false));
         edit.putInt(KEY_AVATAR_RING_COLOR, json.optInt("avatarRingColor", DEFAULT_AVATAR_RING_COLOR));
         edit.putFloat(KEY_AVATAR_RING_WIDTH, clamp((float) json.optDouble("avatarRingWidth", DEFAULT_AVATAR_RING_WIDTH), 1.0f, 12.0f));
         int style = json.optInt("avatarRingStyle", AVATAR_RING_STYLE_SOLID);
         if (style < AVATAR_RING_STYLE_SOLID || style > AVATAR_RING_STYLE_DASHED) style = AVATAR_RING_STYLE_SOLID;
         edit.putInt(KEY_AVATAR_RING_STYLE, style);
+        int uiPreset = json.optInt("uiPreset", UI_PRESET_DEFAULT);
+        if (uiPreset < UI_PRESET_DEFAULT || uiPreset > UI_PRESET_FLOATING) uiPreset = UI_PRESET_DEFAULT;
+        edit.putInt(KEY_UI_PRESET, uiPreset);
         edit.putBoolean(KEY_ANTIVIRUS_ENABLED, json.optBoolean("antivirusEnabled", false));
         int engine = json.optInt("antivirusEngine", ANTIVIRUS_ENGINE_AI);
         edit.putInt(KEY_ANTIVIRUS_ENGINE, engine == ANTIVIRUS_ENGINE_VIRUSTOTAL ? ANTIVIRUS_ENGINE_VIRUSTOTAL : ANTIVIRUS_ENGINE_AI);
