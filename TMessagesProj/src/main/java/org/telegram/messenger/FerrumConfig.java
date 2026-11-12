@@ -168,6 +168,12 @@ public final class FerrumConfig {
         prefs(context).edit().putInt(KEY_UI_PRESET, preset).apply();
     }
 
+    /** Context-free variant, safe to call from view code and early initializers. */
+    public static int getUiPreset() {
+        Context ctx = ApplicationLoader.applicationContext;
+        return ctx != null ? getUiPreset(ctx) : UI_PRESET_DEFAULT;
+    }
+
     public static boolean isAntivirusEnabled(Context context) {
         return prefs(context).getBoolean(KEY_ANTIVIRUS_ENABLED, false);
     }
