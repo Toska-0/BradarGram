@@ -124,6 +124,21 @@ public class ModTheme {
         // фирменный синий Telegram: счётчики на табах и прочие брендовые акценты
         map.put(Theme.key_telegram_color, c[PRIMARY]);
         map.put(Theme.key_telegram_color_text, c[ON_CONTAINER_VAR]);
+        map.put(Theme.key_telegram_color_dialogsLogo, c[PRIMARY]);
+
+        // верхняя стеклянная панель: подложка, иконки и подписи на стекле
+        map.put(Theme.key_glass_targetMainTopPanel, c[CONTAINER]);
+        map.put(Theme.key_glass_targetMainTabs, c[CONTAINER]);
+        map.put(Theme.key_glass_defaultIcon, c[ON_CONTAINER_VAR]);
+        map.put(Theme.key_glass_defaultText, c[ON_CONTAINER_VAR]);
+
+        // синие подписи в списке чатов и бейдж выбранной папки
+        map.put(Theme.key_chats_message, c[PRIMARY]);
+        map.put(Theme.key_chats_nameMessage, c[PRIMARY]);
+        map.put(Theme.key_chats_nameMessage_threeLines, c[PRIMARY]);
+        map.put(Theme.key_chats_attachMessage, c[PRIMARY]);
+        map.put(Theme.key_chats_draft, c[ON_CONTAINER_VAR]);
+        map.put(Theme.key_chats_tabUnreadActiveBackground, c[PRIMARY]);
 
         // акцентные тексты и значения в настройках/диалогах
         map.put(Theme.key_windowBackgroundWhiteValueText, c[PRIMARY]);
