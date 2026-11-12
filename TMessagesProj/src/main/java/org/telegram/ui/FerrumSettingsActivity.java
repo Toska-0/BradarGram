@@ -227,7 +227,6 @@ public class FerrumSettingsActivity extends BaseFragment {
             iconView.setImageResource(item.icon);
             textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
             iconView.setColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, 0.75f), android.graphics.PorterDuff.Mode.SRC_IN);
-            foreground = divider ? null : null;
         }
 
         @Override
