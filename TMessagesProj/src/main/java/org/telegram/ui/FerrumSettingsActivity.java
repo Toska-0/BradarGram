@@ -276,7 +276,11 @@ public class FerrumSettingsActivity extends BaseFragment {
         };
         AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
         b.setTitle(LocaleController.getString(R.string.FerrumUiStyle));
-        b.setItems(names, (d, which) -> { FerrumConfig.setUiPreset(getParentActivity(), which); refresh(); });
+        b.setItems(names, (d, which) -> {
+            FerrumConfig.setUiPreset(getParentActivity(), which);
+            refresh();
+            showRestartDialog();
+        });
         b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
         showDialog(b.create());
     }
