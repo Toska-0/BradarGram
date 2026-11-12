@@ -65,7 +65,19 @@ jobs:
       - name: Build APK
         run: |
           chmod +x gradlew
-          ./gradlew :TMessagesProj_App:assembleAfatDebug --no-daemon --stacktrace
+          set -o pipefail
+          ./gradlew :TMessagesProj_App:assembleAfatDebug --no-daemon --stacktrace 2>&1 | tee /tmp/build.log
+          grep -q "BUILD SUCCESSFUL" /tmp/build.log
+
+      - name: Report compile errors
+        if: failure()
+        run: |
+          {
+            echo "### Build errors"
+            echo '```'
+            grep -nE "error:|e: |FAILURE:|What went wrong" /tmp/build.log 2>/dev/null | tail -80 || echo "no log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:
