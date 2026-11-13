@@ -76,6 +76,7 @@ import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MediaDataController;
 import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.ModConfig;
 import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
@@ -91,6 +92,7 @@ import org.telegram.messenger.UserObject;
 import org.telegram.messenger.browser.Browser;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
+import org.telegram.ui.FerrumSettingsActivity;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.SimpleActionBarMenu;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
@@ -722,6 +724,8 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
 
         items.add(UItem.asCustomShadow(topView, 200 - 12));
+        items.add(SettingCell.Factory.of(29, 0xFF6E9BFF, 0xFF56C6A9, R.drawable.settings_account, getString(R.string.FerrumSettingsEntry), getString(R.string.FerrumSettingsEntryInfo)));
+        items.add(UItem.asShadow(null));
 
         accountNumbers.clear();
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
@@ -812,10 +816,10 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(UItem.asShadow(null));
         }
 
-        if (!getMessagesController().premiumFeaturesBlocked()) {
+        if (!getMessagesController().premiumFeaturesBlocked() && !ModConfig.isHidePremium()) {
             items.add(SettingCell.Factory.of(11, 0xFFB659FF, 0xFF617CFF, R.drawable.settings_premium, getString(R.string.TelegramPremium)));
         }
-        if (getMessagesController().starsPurchaseAvailable()) {
+        if (getMessagesController().starsPurchaseAvailable() && !ModConfig.isHideStars()) {
             StarsController c = StarsController.getInstance(currentAccount);
             long balance = c.getBalance().amount;
             items.add(SettingCell.Factory.of(12, 0xFFEFA612, 0xFFE77512, R.drawable.settings_stars, getString(R.string.TelegramStars), null, c.balanceAvailable() && balance > 0 ? StarsIntroActivity.formatStarsAmount(c.getBalance(), 0.85f, ' ') : ""));
@@ -1001,6 +1005,10 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             }
             case 27: {
                 presentFragment(new HeaderSettingsActivity());
+                break;
+            }
+            case 29: {
+                presentSettingFragment(new FerrumSettingsActivity());
                 break;
             }
         }

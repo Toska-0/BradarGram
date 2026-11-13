@@ -205,6 +205,9 @@ public class LiteMode {
     }
 
     public static boolean isEnabled(int flag) {
+        if (ModConfig.isNoBlur() && (flag & (FLAG_CHAT_BLUR | FLAG_LIQUID_GLASS)) != 0) {
+            return false;
+        }
         if (flag == FLAG_CHAT_FORUM_TWOCOLUMN && AndroidUtilities.isTablet()) {
             // always enabled for tablets
             return true;

@@ -577,6 +577,9 @@ public class UserConfig extends BaseController {
         if (user == null) {
             return false;
         }
+        if (ModConfig.isLocalPremium()) {
+            return true;
+        }
         return user.premium;
     }
 

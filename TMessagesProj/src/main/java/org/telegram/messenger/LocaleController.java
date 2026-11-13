@@ -1472,6 +1472,16 @@ public class LocaleController {
     private String getStringInternal(String key, String fallback, int res) {
         final String value = getStringV2(key, res, fallback);
         if (value == null) {
+            // Ferrum: strings that exist only as Android resources (e.g. mod strings
+            // absent from the langpack) must fall back to the APK resources
+            // instead of producing "LOC_ERR:null".
+            if (res != 0) {
+                try {
+                    return ApplicationLoader.applicationContext.getString(res);
+                } catch (Exception e) {
+                    FileLog.e(e);
+                }
+            }
             return "LOC_ERR:" + key;
         }
         return value;

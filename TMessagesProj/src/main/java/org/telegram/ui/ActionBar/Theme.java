@@ -9123,6 +9123,16 @@ public class Theme {
     }
 
     public static int getColor(int key, boolean[] isDefault, boolean ignoreAnimation) {
+        if (org.telegram.messenger.ModConfig.getColorPack() > 0 && currentTheme != null) {
+            try {
+                final int modColor = org.telegram.messenger.ModTheme.getColor(key, currentTheme.isDark());
+                if (modColor != 0) {
+                    return modColor;
+                }
+            } catch (Throwable ignore) {
+                // never let the color pack crash the app, fall back to theme colors
+            }
+        }
         if (SharedConfig.compactMode) {
             // compact mode swaps some message colors for its own keys, see getCompactColor
             final Integer compactColor = getCompactColor(key, null);

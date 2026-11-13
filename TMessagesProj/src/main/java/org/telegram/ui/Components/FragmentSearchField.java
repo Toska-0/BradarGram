@@ -35,6 +35,7 @@ import androidx.annotation.NonNull;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.AnimationNotificationsLocker;
+import org.telegram.messenger.FerrumConfig;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
@@ -209,8 +210,19 @@ public class FragmentSearchField extends FrameLayout implements FactorAnimator.T
         canvas.restore();
     }
 
+    /** Ferrum: corner radius of the search field follows the selected UI preset. */
+    public static int getSearchRadiusDp() {
+        final int preset = FerrumConfig.getUiPreset();
+        if (preset == FerrumConfig.UI_PRESET_FULL_WIDTH) {
+            return 12;
+        } else if (preset == FerrumConfig.UI_PRESET_FLOATING) {
+            return 26;
+        }
+        return 20;
+    }
+
     public void setupBlurredBackground(BlurredBackgroundDrawable drawable) {
-        drawable.setRadius(dp(20));
+        drawable.setRadius(dp(getSearchRadiusDp()));
         drawable.setPadding(dp(4));
         blurredBackgroundDrawable = drawable;
     }
@@ -276,8 +288,8 @@ public class FragmentSearchField extends FrameLayout implements FactorAnimator.T
     public void updateColors() {
         final boolean isDark = resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark();
         bg = isSectionBackground ?
-            Theme.createRoundRectDrawableShadowed(dp(20), getThemedColor(Theme.key_windowBackgroundWhite)) :
-            Theme.createRoundRectDrawable(dp(20), isWhiteBackground ? getThemedColor(Theme.key_windowBackgroundWhite) : getThemedColor(Theme.key_windowBackgroundWhiteBlackText, isDark ? 0.07f : 0.05f));
+            Theme.createRoundRectDrawableShadowed(dp(getSearchRadiusDp()), getThemedColor(Theme.key_windowBackgroundWhite)) :
+            Theme.createRoundRectDrawable(dp(getSearchRadiusDp()), isWhiteBackground ? getThemedColor(Theme.key_windowBackgroundWhite) : getThemedColor(Theme.key_windowBackgroundWhiteBlackText, isDark ? 0.07f : 0.05f));
         searchIcon.setColorFilter(getThemedColor(Theme.key_windowBackgroundWhiteBlackText, 0.6f), PorterDuff.Mode.MULTIPLY);
         closeIcon.setColorFilter(getThemedColor(Theme.key_windowBackgroundWhiteBlackText, 0.6f), PorterDuff.Mode.MULTIPLY);
         closeIcon.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), 1, dp(17)));

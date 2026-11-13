@@ -74,7 +74,25 @@ public class VoIPHelper {
 
 	private static final int VOIP_SUPPORT_ID = 4244000;
 
+	private static boolean modCallConfirmed;
+
 	public static void startCall(TLRPC.User user, boolean videoCall, boolean canVideoCall, final Activity activity, TLRPC.UserFull userFull, AccountInstance accountInstance) {
+		if (org.telegram.messenger.ModConfig.isConfirmCalls() && !modCallConfirmed && activity != null) {
+			new AlertDialog.Builder(activity)
+					.setTitle(LocaleController.getString(R.string.ModCallConfirmTitle))
+					.setMessage(LocaleController.getString(R.string.ModCallConfirmText))
+					.setPositiveButton(LocaleController.getString(R.string.Call), (dialog, which) -> {
+						modCallConfirmed = true;
+						try {
+							startCall(user, videoCall, canVideoCall, activity, userFull, accountInstance);
+						} finally {
+							modCallConfirmed = false;
+						}
+					})
+					.setNegativeButton(LocaleController.getString(R.string.Cancel), null)
+					.show();
+			return;
+		}
 		if (accountInstance == null ? MessagesController.getInstance(UserConfig.selectedAccount).isFrozen() : accountInstance.getMessagesController().isFrozen()) {
 			AccountFrozenAlert.show(accountInstance == null ? UserConfig.selectedAccount : accountInstance.getCurrentAccount());
 			return;
