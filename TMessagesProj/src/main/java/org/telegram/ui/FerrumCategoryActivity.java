@@ -9,6 +9,7 @@ import android.text.InputType;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -101,7 +102,7 @@ public class FerrumCategoryActivity extends BaseFragment {
             @Override public void onItemClick(int id) { if (id == -1) finishFragment(); }
         });
 
-        FrameLayout frame = new android.widget.FrameLayout(context);
+        FrameLayout frame = new FrameLayout(context);
         fragmentView = frame;
         frame.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
         rebuildRows(context);
