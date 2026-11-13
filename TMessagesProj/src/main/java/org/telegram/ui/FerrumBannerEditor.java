@@ -209,8 +209,8 @@ public class FerrumBannerEditor extends BaseFragment {
             canvas.restoreToCount(save);
 
             // затухание в цвет фона, как dispatchDraw в TopView
-            if (fadeWidth != vw || fadeColor != bgColor) {
-                fadeWidth = vw;
+            if (fadeWidth != (int) vw || fadeColor != bgColor) {
+                fadeWidth = (int) vw;
                 fadeColor = bgColor;
                 fadePaint.setShader(new LinearGradient(
                         0, h - AndroidUtilities.dp(FADE_HEIGHT_DP),

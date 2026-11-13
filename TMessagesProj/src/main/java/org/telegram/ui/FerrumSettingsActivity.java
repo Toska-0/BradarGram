@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.FerrumConfig;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.ModConfig;
 import org.telegram.messenger.R;
