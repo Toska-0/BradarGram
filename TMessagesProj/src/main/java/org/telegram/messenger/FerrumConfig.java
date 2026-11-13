@@ -3,7 +3,6 @@ package org.telegram.messenger;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import org.telegram.ui.ActionBar.Theme;
 import org.json.JSONObject;
 
 /**
@@ -64,13 +63,18 @@ public final class FerrumConfig {
         prefs(context).edit().putInt(KEY_ACCENT_COLOR, color).apply();
     }
 
-    /** Applies the saved Ferrum accent to Telegram's shared accent-driven UI colors. */
+    /** Whether the user has ever chosen a Ferrum accent color. */
+    public static boolean hasAccentColor(Context context) {
+        return prefs(context).contains(KEY_ACCENT_COLOR);
+    }
+
+    /**
+     * Applies the saved Ferrum accent to Telegram's accent-driven UI colors.
+     * The accent lives in {@link ModTheme} as a dynamic override, so it survives
+     * theme reloads and restarts and takes precedence over color packs.
+     */
     public static void applyAccentTheme(Context context) {
-        int color = getAccentColor(context);
-        Theme.setColor(Theme.key_actionBarDefaultIcon, color, false);
-        Theme.setColor(Theme.key_windowBackgroundWhiteBlueText, color, false);
-        Theme.setColor(Theme.key_featuredStickers_addButton, color, false);
-        Theme.setColor(Theme.key_chat_messageLinkOut, color, false);
+        ModTheme.setAccentColor(getAccentColor(context));
     }
 
     public static String getProfileBannerUri(Context context) {

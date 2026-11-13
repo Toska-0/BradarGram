@@ -1,0 +1,10 @@
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ActionBar/Theme.java
+@@ -9115,7 +9115,7 @@
+     }
+ 
+     public static int getColor(int key, boolean[] isDefault, boolean ignoreAnimation) {
+-        if (org.telegram.messenger.ModConfig.getColorPack() > 0 && currentTheme != null) {
++        if (currentTheme != null) {
+             try {
+                 final int modColor = org.telegram.messenger.ModTheme.getColor(key, currentTheme.isDark());

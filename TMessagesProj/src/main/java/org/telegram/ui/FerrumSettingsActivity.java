@@ -85,6 +85,11 @@ public class FerrumSettingsActivity extends BaseFragment {
         return fragmentView;
     }
 
+    @Override
+    protected RecyclerListView getListViewForSimpleGlass() {
+        return listView;
+    }
+
     private ArrayList<Item> buildItems(Context context) {
         ArrayList<Item> items = new ArrayList<>();
         items.add(headerItem());

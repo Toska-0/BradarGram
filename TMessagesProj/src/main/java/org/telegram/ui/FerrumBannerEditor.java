@@ -162,7 +162,8 @@ public class FerrumBannerEditor extends BaseFragment {
 
     /**
      * Рисует баннер той же математикой, что и TopView в профиле: непрозрачная полоса
-     * высотой 262dp, center-crop, масштаб и сдвиг вокруг центра полосы, затухание снизу.
+     * высотой 262dp, вся картинка вписана в полосу (fit), масштаб и сдвиг вокруг центра
+     * полосы, затухание снизу.
      */
     private class BannerEditView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
@@ -195,8 +196,8 @@ public class FerrumBannerEditor extends BaseFragment {
             float vw = getWidth();
             float h = AndroidUtilities.dp(BANNER_HEIGHT_DP);
             float bw = bitmap.getWidth(), bh = bitmap.getHeight();
-            // center-crop внутри полосы высотой h, как ImageView CENTER_CROP в TopView
-            float base = Math.max(vw / bw, h / bh);
+            // вся картинка вписана в полосу высотой h (как ImageView FIT_CENTER в TopView)
+            float base = Math.min(vw / bw, h / bh);
             matrix.reset();
             matrix.postScale(base, base);
             matrix.postTranslate((vw - bw * base) / 2f, (h - bh * base) / 2f);

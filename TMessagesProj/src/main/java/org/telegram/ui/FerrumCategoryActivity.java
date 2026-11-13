@@ -117,6 +117,11 @@ public class FerrumCategoryActivity extends BaseFragment {
         return fragmentView;
     }
 
+    @Override
+    protected RecyclerListView getListViewForSimpleGlass() {
+        return listView;
+    }
+
     private String getTitle() {
         switch (category) {
             case CAT_PROFILE: return LocaleController.getString(R.string.FerrumSectionBanner);

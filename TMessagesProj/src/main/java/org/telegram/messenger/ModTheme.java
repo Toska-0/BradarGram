@@ -1,12 +1,15 @@
 package org.telegram.messenger;
 
+import android.content.Context;
 import android.util.SparseIntArray;
 
 import org.telegram.ui.ActionBar.Theme;
 
 /**
- * Цветовые пакеты интерфейса. Спокойные пастельные палитры, у каждой своя светлая и тёмная версия.
- * Пакет подменяет ключевые цвета темы в {@link Theme#getColor(int, boolean[], boolean)}.
+ * Цветовые пакеты интерфейса и акцент Ferrum. Спокойные пастельные палитры,
+ * у каждой своя светлая и тёмная версия. Пакет подменяет ключевые цвета темы
+ * в {@link Theme#getColor(int, boolean[], boolean)}; акцент Ferrum
+ * ({@link #setAccentColor(int)}) имеет приоритет над пакетом.
  */
 public class ModTheme {
 
@@ -54,6 +57,10 @@ public class ModTheme {
     private static final SparseIntArray[] lightMaps = new SparseIntArray[LIGHT.length];
     private static final SparseIntArray[] darkMaps = new SparseIntArray[DARK.length];
 
+    // Акцент Ferrum: динамическая перекраска поверх любой темы и пакета
+    private static volatile SparseIntArray accentMap;
+    private static volatile boolean accentLoaded;
+
     public static synchronized void invalidate() {
         for (int i = 0; i < lightMaps.length; i++) {
             lightMaps[i] = null;
@@ -70,8 +77,16 @@ public class ModTheme {
         return src[pack].clone();
     }
 
-    /** @return цвет или 0, если ключ не переопределяется. */
+    /** @return цвет акцента Ferrum, цветового пакета или 0, если ключ не переопределяется. */
     public static int getColor(int key, boolean isDark) {
+        ensureAccentLoaded();
+        SparseIntArray accent = accentMap;
+        if (accent != null) {
+            int accentColor = accent.get(key, 0);
+            if (accentColor != 0) {
+                return accentColor;
+            }
+        }
         int pack = ModConfig.getColorPack();
         if (pack <= 0 || pack >= LIGHT.length) {
             return 0;
@@ -81,6 +96,101 @@ public class ModTheme {
             map = build(pack, isDark);
         }
         return map.get(key, 0);
+    }
+
+    /** Задаёт акцент Ferrum (выбор пользователя) и перекрашивает интерфейс сразу. */
+    public static void setAccentColor(int color) {
+        accentMap = buildAccentMap(color);
+        accentLoaded = true;
+        applyLive();
+    }
+
+    /** Ленивая загрузка сохранённого акцента при первом обращении к цветам (в том числе после перезапуска). */
+    private static void ensureAccentLoaded() {
+        if (accentMap != null || accentLoaded) {
+            return;
+        }
+        synchronized (ModTheme.class) {
+            if (accentMap != null || accentLoaded) {
+                return;
+            }
+            accentLoaded = true;
+            try {
+                Context ctx = ApplicationLoader.applicationContext;
+                if (ctx != null && FerrumConfig.hasAccentColor(ctx)) {
+                    accentMap = buildAccentMap(FerrumConfig.getAccentColor(ctx));
+                }
+            } catch (Throwable t) {
+                FileLog.e(t);
+            }
+        }
+    }
+
+    /** Акцентные ключи: всё, что Telegram рисует «фирменным синим». */
+    private static SparseIntArray buildAccentMap(int color) {
+        int pressed = blend(color, 0xFF000000, 0.14f);
+        int selection = blend(color, 0xFFFFFFFF, 0.30f);
+        int onAccent = 0xFFFFFFFF;
+        SparseIntArray map = new SparseIntArray();
+        map.put(Theme.key_chats_actionBackground, color);
+        map.put(Theme.key_chats_actionPressedBackground, pressed);
+        map.put(Theme.key_chats_actionIcon, onAccent);
+        map.put(Theme.key_windowBackgroundWhiteBlueText, color);
+        map.put(Theme.key_windowBackgroundWhiteBlueText2, color);
+        map.put(Theme.key_windowBackgroundWhiteBlueText3, color);
+        map.put(Theme.key_windowBackgroundWhiteBlueText4, color);
+        map.put(Theme.key_windowBackgroundWhiteBlueText5, color);
+        map.put(Theme.key_windowBackgroundWhiteBlueText6, color);
+        map.put(Theme.key_windowBackgroundWhiteBlueText7, color);
+        map.put(Theme.key_windowBackgroundWhiteBlueHeader, color);
+        map.put(Theme.key_windowBackgroundWhiteBlueButton, color);
+        map.put(Theme.key_windowBackgroundWhiteBlueIcon, color);
+        map.put(Theme.key_windowBackgroundWhiteValueText, color);
+        map.put(Theme.key_windowBackgroundWhiteLinkText, color);
+        map.put(Theme.key_windowBackgroundWhiteLinkSelection, selection);
+        map.put(Theme.key_chat_messageLinkIn, color);
+        map.put(Theme.key_chat_messageLinkOut, color);
+        map.put(Theme.key_dialogTextLink, color);
+        map.put(Theme.key_dialogTextBlue, color);
+        map.put(Theme.key_dialogTextBlue2, color);
+        map.put(Theme.key_dialogTextBlue4, color);
+        map.put(Theme.key_dialogButton, color);
+        map.put(Theme.key_switchTrackChecked, color);
+        map.put(Theme.key_switch2TrackChecked, color);
+        map.put(Theme.key_radioBackgroundChecked, color);
+        map.put(Theme.key_checkboxCheck, onAccent);
+        map.put(Theme.key_chats_unreadCounter, color);
+        map.put(Theme.key_chats_unreadCounterText, onAccent);
+        map.put(Theme.key_chats_tabUnreadActiveBackground, color);
+        map.put(Theme.key_chats_message, color);
+        map.put(Theme.key_chats_nameMessage, color);
+        map.put(Theme.key_chats_nameMessage_threeLines, color);
+        map.put(Theme.key_chats_attachMessage, color);
+        map.put(Theme.key_chat_inReplyLine, color);
+        map.put(Theme.key_chat_outReplyLine, color);
+        map.put(Theme.key_telegram_color, color);
+        map.put(Theme.key_telegram_color_text, onAccent);
+        map.put(Theme.key_telegram_color_dialogsLogo, color);
+        map.put(Theme.key_glass_tabSelected, color);
+        map.put(Theme.key_glass_tabSelectedText, onAccent);
+        map.put(Theme.key_profile_tabSelectedText, color);
+        map.put(Theme.key_profile_tabSelectedLine, color);
+        map.put(Theme.key_featuredStickers_addButton, color);
+        map.put(Theme.key_dialog_inlineProgress, color);
+        map.put(Theme.key_chats_verifiedBackground, color);
+        map.put(Theme.key_profile_verifiedBackground, color);
+        map.put(Theme.key_dialogSearchText, color);
+        map.put(Theme.key_chat_fieldOverlayText, color);
+        map.put(Theme.key_chats_onlineCircle, color);
+        return map;
+    }
+
+    private static int blend(int from, int to, float f) {
+        float inv = 1f - f;
+        int r = Math.round(((from >> 16) & 0xFF) * inv + ((to >> 16) & 0xFF) * f);
+        int g = Math.round(((from >> 8) & 0xFF) * inv + ((to >> 8) & 0xFF) * f);
+        int b = Math.round((from & 0xFF) * inv + (to & 0xFF) * f);
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 
     private static synchronized SparseIntArray build(int pack, boolean isDark) {
@@ -94,6 +204,7 @@ public class ModTheme {
         map.put(Theme.key_windowBackgroundWhiteBlueText, c[PRIMARY]);
         map.put(Theme.key_windowBackgroundWhiteBlueHeader, c[PRIMARY]);
         map.put(Theme.key_windowBackgroundWhiteLinkText, c[PRIMARY]);
+        map.put(Theme.key_windowBackgroundWhiteLinkSelection, blend(c[PRIMARY], 0xFFFFFFFF, 0.30f));
         map.put(Theme.key_dialogTextBlue, c[PRIMARY]);
         map.put(Theme.key_dialogButton, c[PRIMARY]);
         map.put(Theme.key_switchTrackChecked, c[PRIMARY]);
@@ -150,6 +261,12 @@ public class ModTheme {
         map.put(Theme.key_windowBackgroundWhiteBlueText7, c[PRIMARY]);
         map.put(Theme.key_dialogTextBlue2, c[PRIMARY]);
         map.put(Theme.key_dialogTextBlue4, c[PRIMARY]);
+
+        // вкладки профиля (синяя пилюля «Публикации») и ссылки в диалогах
+        map.put(Theme.key_profile_tabSelectedText, c[PRIMARY]);
+        map.put(Theme.key_profile_tabSelectedLine, c[PRIMARY]);
+        map.put(Theme.key_dialogTextLink, c[PRIMARY]);
+        map.put(Theme.key_windowBackgroundWhiteBlueIcon, c[PRIMARY]);
 
         // остатки синего: ссылки во входящих, кнопки диалогов, поиск, галочки, онлайн-индикатор
         map.put(Theme.key_chat_messageLinkIn, c[PRIMARY]);

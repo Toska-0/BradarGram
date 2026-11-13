@@ -39,7 +39,8 @@
              setWillNotDraw(false);
 @@ -1243,13 +1273,13 @@
                          ferrumBannerView = new ImageView(context);
-                         ferrumBannerView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+-                        ferrumBannerView.setScaleType(ImageView.ScaleType.CENTER_CROP);
++                        ferrumBannerView.setScaleType(ImageView.ScaleType.FIT_CENTER);
                          ferrumBannerView.setImageURI(android.net.Uri.parse(bannerUri));
 -                        ferrumBannerView.setAlpha(0.48f);
 +                        ferrumBannerView.setAlpha(1.0f);
