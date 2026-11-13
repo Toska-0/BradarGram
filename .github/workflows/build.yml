@@ -10,6 +10,9 @@ on:
       - master
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: write
+
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
@@ -84,6 +87,24 @@ jobs:
             echo "::error title=Build error $i::$msg"
             [ $i -ge 10 ] && break
           done < /tmp/errors.txt
+
+      - name: Save error log to ci-logs branch
+        if: failure()
+        run: |
+          git config user.name "ferrum-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git fetch origin ci-logs 2>/dev/null || true
+          if git rev-parse --verify origin/ci-logs >/dev/null 2>&1; then
+            git checkout --force ci-logs
+          else
+            git checkout --orphan ci-logs
+            git rm -rf . 2>/dev/null || true
+          fi
+          grep -nE "error: |e: |FAILURE:|Execution failed for task|Caused by:|What went wrong" /tmp/build.log 2>/dev/null | tail -100 > errors-extract.txt || true
+          { echo "=== errors-extract (head ${GITHUB_SHA::7}) ==="; cat errors-extract.txt; echo "=== last 150 lines of build.log ==="; tail -150 /tmp/build.log; } > build-errors.log
+          git add -f build-errors.log
+          git commit -m "build errors ${GITHUB_SHA::7}" || exit 0
+          git push origin ci-logs
 
       - name: Upload build log on failure
         if: failure()
