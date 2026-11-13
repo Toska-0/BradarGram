@@ -1,0 +1,252 @@
+=== errors-extract (head eda076a) ===
+2234:C/C++: /usr/local/lib/android/sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__memory/allocator_traits.h:305:10: note: in instantiation of function template specialization 'std::__construct_at<std::pair<const int, twlite::Renderer::Touch>, const std::piecewise_construct_t &, std::tuple<const int &>, std::tuple<>, std::pair<const int, twlite::Renderer::Touch> *>' requested here
+2237:C/C++: /usr/local/lib/android/sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__hash_table:1787:18: note: in instantiation of function template specialization 'std::allocator_traits<std::allocator<std::__hash_node<std::__hash_value_type<int, twlite::Renderer::Touch>, void *>>>::construct<std::pair<const int, twlite::Renderer::Touch>, const std::piecewise_construct_t &, std::tuple<const int &>, std::tuple<>, void, void>' requested here
+2240:C/C++: /usr/local/lib/android/sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__hash_table:1492:25: note: in instantiation of function template specialization 'std::__hash_table<std::__hash_value_type<int, twlite::Renderer::Touch>, std::__unordered_map_hasher<int, std::__hash_value_type<int, twlite::Renderer::Touch>, std::hash<int>, std::equal_to<int>>, std::__unordered_map_equal<int, std::__hash_value_type<int, twlite::Renderer::Touch>, std::equal_to<int>, std::hash<int>>, std::allocator<std::__hash_value_type<int, twlite::Renderer::Touch>>>::__construct_node_hash<const std::piecewise_construct_t &, std::tuple<const int &>, std::tuple<>>' requested here
+2243:C/C++: /usr/local/lib/android/sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/unordered_map:1737:8: note: in instantiation of function template specialization 'std::__hash_table<std::__hash_value_type<int, twlite::Renderer::Touch>, std::__unordered_map_hasher<int, std::__hash_value_type<int, twlite::Renderer::Touch>, std::hash<int>, std::equal_to<int>>, std::__unordered_map_equal<int, std::__hash_value_type<int, twlite::Renderer::Touch>, std::equal_to<int>, std::hash<int>>, std::allocator<std::__hash_value_type<int, twlite::Renderer::Touch>>>::__emplace_unique_key_args<int, const std::piecewise_construct_t &, std::tuple<const int &>, std::tuple<>>' requested here
+2246:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/twidget/twidget/Sources/TwidgetCore/src/renderer.cpp:5106:17: note: in instantiation of member function 'std::unordered_map<int, twlite::Renderer::Touch>::operator[]' requested here
+2249:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/twidget/twidget/Sources/TwidgetCore/src/renderer.h:227:12: note: during field initialization in the implicit default constructor
+2255:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/twidget/twidget/Sources/TwidgetCore/src/renderer.h:227:12: note: during field initialization in the implicit default constructor
+2276:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgnet/Connection.cpp:216:93: note: place parentheses around the '&&' expression to silence this warning
+2283:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgnet/Connection.cpp:527:223: note: place parentheses around the '&&' expression to silence this warning
+2290:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgnet/Connection.cpp:660:57: note: place parentheses around the '&&' expression to silence this warning
+2297:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgnet/Connection.cpp:715:62: note: place parentheses around the '&&' expression to silence this warning
+2304:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgnet/Connection.cpp:715:147: note: place parentheses around the '&&' expression to silence this warning
+2312:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgnet/ConnectionSocket.cpp:688:29: note: place parentheses around the '&&' expression to silence this warning
+2324:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgnet/Request.cpp:82:19: note: place parentheses around the '&&' expression to silence this warning
+2331:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgnet/Request.cpp:82:77: note: place parentheses around the '&&' expression to silence this warning
+2339:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgnet/Datacenter.cpp:200:62: note: place parentheses around the '&&' expression to silence this warning
+2345:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgnet/Datacenter.cpp:258:62: note: place parentheses around the '&&' expression to silence this warning
+2351:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgnet/Datacenter.cpp:378:62: note: place parentheses around the '&&' expression to silence this warning
+2357:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgnet/Datacenter.cpp:447:62: note: place parentheses around the '&&' expression to silence this warning
+2418:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgcalls/tgcalls/group/GroupInstanceReferenceImpl.cpp:692:39: note: in instantiation of function template specialization 'std::make_unique<webrtc::RtcEventLogFactory, webrtc::TaskQueueFactory *>' requested here
+2421:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/api/rtc_event_log/rtc_event_log_factory.h:29:5: note: 'RtcEventLogFactory' has been explicitly marked deprecated here
+2456:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgcalls/tgcalls/v2/InstanceV2CompatImpl.cpp:442:68: note: in instantiation of function template specialization 'std::make_unique<webrtc::RtcEventLogFactory, webrtc::TaskQueueFactory *>' requested here
+2459:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/api/rtc_event_log/rtc_event_log_factory.h:29:5: note: 'RtcEventLogFactory' has been explicitly marked deprecated here
+2472:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgcalls/tgcalls/v2/InstanceV2ReferenceImpl.cpp:522:68: note: in instantiation of function template specialization 'std::make_unique<webrtc::RtcEventLogFactory, webrtc::TaskQueueFactory *>' requested here
+2475:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/api/rtc_event_log/rtc_event_log_factory.h:29:5: note: 'RtcEventLogFactory' has been explicitly marked deprecated here
+2504:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/tgcalls/tgcalls/v2wasm/CallCoreHost.cpp:601:64: note: in instantiation of function template specialization 'std::make_unique<webrtc::RtcEventLogFactory, webrtc::TaskQueueFactory *>' requested here
+2507:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/api/rtc_event_log/rtc_event_log_factory.h:29:5: note: 'RtcEventLogFactory' has been explicitly marked deprecated here
+2523:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:31:27: note: expanded from macro 'RTC_GUARDED_BY'
+2526:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:23:46: note: expanded from macro 'RTC_THREAD_ANNOTATION_ATTRIBUTE__'
+2532:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:31:71: note: expanded from macro 'RTC_GUARDED_BY'
+2548:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:31:27: note: expanded from macro 'RTC_GUARDED_BY'
+2551:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:23:46: note: expanded from macro 'RTC_THREAD_ANNOTATION_ATTRIBUTE__'
+2557:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:31:71: note: expanded from macro 'RTC_GUARDED_BY'
+2566:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:31:27: note: expanded from macro 'RTC_GUARDED_BY'
+2569:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:23:46: note: expanded from macro 'RTC_THREAD_ANNOTATION_ATTRIBUTE__'
+2575:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:31:71: note: expanded from macro 'RTC_GUARDED_BY'
+2584:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:31:27: note: expanded from macro 'RTC_GUARDED_BY'
+2587:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:23:46: note: expanded from macro 'RTC_THREAD_ANNOTATION_ATTRIBUTE__'
+2593:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:31:71: note: expanded from macro 'RTC_GUARDED_BY'
+2601:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:31:27: note: expanded from macro 'RTC_GUARDED_BY'
+2604:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:23:46: note: expanded from macro 'RTC_THREAD_ANNOTATION_ATTRIBUTE__'
+2609:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/webrtc/rtc_base/thread_annotations.h:31:71: note: expanded from macro 'RTC_GUARDED_BY'
+2616:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/image.cpp:652:15: note: initializer of 'div' is not a constant expression
+2617:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/image.cpp:647:15: note: declared here
+2623:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/c_utils.h:21:19: note: expanded from macro 'MAX'
+2626:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/image.cpp:655:14: note: read of non-const variable 'w' is not allowed in a constant expression
+2627:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/c_utils.h:21:20: note: expanded from macro 'MAX'
+2630:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/image.cpp:633:9: note: declared here
+2639:C/C++: /usr/local/lib/android/sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/stdlib.h:132:18: note: expanded from macro 'RAND_MAX'
+2652:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/c_utils.h:11:67: note: expanded from macro 'LOGE'
+2655:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/gifvideo.cpp:143:10: note: treat the string as an argument to avoid this
+2659:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/c_utils.h:11:67: note: expanded from macro 'LOGE'
+2665:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/c_utils.h:11:67: note: expanded from macro 'LOGE'
+2672:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/c_utils.h:11:67: note: expanded from macro 'LOGE'
+2687:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/gifvideo.cpp:768:39: note: place parentheses around the '&&' expression to silence this warning
+2694:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/gifvideo.cpp:768:104: note: place parentheses around the '&&' expression to silence this warning
+2705:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/.cxx/Debug/3e85i19n/x86_64/<command line>:44:9: note: previous definition is here
+2712:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/org_telegram_messenger_voip_Instance.cpp:407:88: note: use array indexing to silence this warning
+2719:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/org_telegram_messenger_voip_Instance.cpp:557:34: note: read of non-const variable 'size' is not allowed in a constant expression
+2720:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/org_telegram_messenger_voip_Instance.cpp:552:34: note: declared here
+2726:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/org_telegram_messenger_voip_Instance.cpp:558:38: note: read of non-const variable 'size' is not allowed in a constant expression
+2727:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/org_telegram_messenger_voip_Instance.cpp:552:34: note: declared here
+2733:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/org_telegram_messenger_voip_Instance.cpp:559:39: note: read of non-const variable 'size' is not allowed in a constant expression
+2734:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/org_telegram_messenger_voip_Instance.cpp:552:34: note: declared here
+2740:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/org_telegram_messenger_voip_Instance.cpp:608:30: note: read of non-const variable 'size' is not allowed in a constant expression
+2741:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/voip/org_telegram_messenger_voip_Instance.cpp:605:30: note: declared here
+2756:C/C++: /usr/local/lib/android/sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/tuple:1410:7: note: in implicit default constructor for 'twlite::Renderer::Touch' first required here
+2759:C/C++: /usr/local/lib/android/sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__utility/pair.h:282:9: note: in instantiation of function template specialization 'std::pair<const int, twlite::Renderer::Touch>::pair<const int &, 0UL>' requested here
+2762:C/C++: /usr/local/lib/android/sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__memory/construct_at.h:41:46: note: in instantiation of function template specialization 'std::pair<const int, twlite::Renderer::Touch>::pair<const int &>' requested here
+2765:C/C++: /usr/local/lib/android/sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__memory/construct_at.h:49:15: note: in instantiation of function template specialization 'std::construct_at<std::pair<const int, twlite::Renderer::Touch>, const std::piecewise_construct_t &, std::tuple<const int &>, std::tuple<>, std::pair<const int, twlite::Renderer::Touch> *>' requested here
+2768:C/C++: /usr/local/lib/android/sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__memory/allocator_traits.h:305:10: note: in instantiation of function template specialization 'std::__construct_at<std::pair<const int, twlite::Renderer::Touch>, const std::piecewise_construct_t &, std::tuple<const int &>, std::tuple<>, std::pair<const int, twlite::Renderer::Touch> *>' requested here
+2771:C/C++: /usr/local/lib/android/sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__hash_table:1787:18: note: in instantiation of function template specialization 'std::allocator_traits<std::allocator<std::__hash_node<std::__hash_value_type<int, twlite::Renderer::Touch>, void *>>>::construct<std::pair<const int, twlite::Renderer::Touch>, const std::piecewise_construct_t &, std::tuple<const int &>, std::tuple<>, void, void>' requested here
+2774:C/C++: /usr/local/lib/android/sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/__hash_table:1492:25: note: in instantiation of function template specialization 'std::__hash_table<std::__hash_value_type<int, twlite::Renderer::Touch>, std::__unordered_map_hasher<int, std::__hash_value_type<int, twlite::Renderer::Touch>, std::hash<int>, std::equal_to<int>>, std::__unordered_map_equal<int, std::__hash_value_type<int, twlite::Renderer::Touch>, std::equal_to<int>, std::hash<int>>, std::allocator<std::__hash_value_type<int, twlite::Renderer::Touch>>>::__construct_node_hash<const std::piecewise_construct_t &, std::tuple<const int &>, std::tuple<>>' requested here
+2777:C/C++: /usr/local/lib/android/sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1/unordered_map:1737:8: note: in instantiation of function template specialization 'std::__hash_table<std::__hash_value_type<int, twlite::Renderer::Touch>, std::__unordered_map_hasher<int, std::__hash_value_type<int, twlite::Renderer::Touch>, std::hash<int>, std::equal_to<int>>, std::__unordered_map_equal<int, std::__hash_value_type<int, twlite::Renderer::Touch>, std::equal_to<int>, std::hash<int>>, std::allocator<std::__hash_value_type<int, twlite::Renderer::Touch>>>::__emplace_unique_key_args<int, const std::piecewise_construct_t &, std::tuple<const int &>, std::tuple<>>' requested here
+2780:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/twidget/twidget/Sources/TwidgetCore/src/renderer.cpp:5106:17: note: in instantiation of member function 'std::unordered_map<int, twlite::Renderer::Touch>::operator[]' requested here
+2783:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/twidget/twidget/Sources/TwidgetCore/src/renderer.h:227:12: note: during field initialization in the implicit default constructor
+2789:C/C++: /home/runner/work/BradarGram/BradarGram/TMessagesProj/jni/twidget/twidget/Sources/TwidgetCore/src/renderer.h:227:12: note: during field initialization in the implicit default constructor
+2874:/home/runner/work/BradarGram/BradarGram/TMessagesProj/src/main/java/org/telegram/ui/FerrumSettingsActivity.java:152: error: cannot find symbol
+2879:/home/runner/work/BradarGram/BradarGram/TMessagesProj/src/main/java/org/telegram/ui/FerrumBannerEditor.java:213: error: incompatible types: possible lossy conversion from float to int
+2882:Note: Some input files use or override a deprecated API.
+2883:Note: Recompile with -Xlint:deprecation for details.
+2884:Note: Some input files use unchecked or unsafe operations.
+2885:Note: Recompile with -Xlint:unchecked for details.
+2895:FAILURE: Build failed with an exception.
+2897:* What went wrong:
+2898:Execution failed for task ':TMessagesProj:compileDebugJavaWithJavac'.
+2903:  /home/runner/work/BradarGram/BradarGram/TMessagesProj/src/main/java/org/telegram/ui/FerrumSettingsActivity.java:152: error: cannot find symbol
+2908:  /home/runner/work/BradarGram/BradarGram/TMessagesProj/src/main/java/org/telegram/ui/FerrumBannerEditor.java:213: error: incompatible types: possible lossy conversion from float to int
+2911:  Note: Some input files use or override a deprecated API.
+2912:  Note: Recompile with -Xlint:deprecation for details.
+2913:  Note: Some input files use unchecked or unsafe operations.
+2914:  Note: Recompile with -Xlint:unchecked for details.
+2923:org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':TMessagesProj:compileDebugJavaWithJavac'.
+2985:Caused by: org.gradle.api.internal.tasks.compile.CompilationFailedException: Compilation failed; see the compiler output below.
+2989:/home/runner/work/BradarGram/BradarGram/TMessagesProj/src/main/java/org/telegram/ui/FerrumSettingsActivity.java:152: error: cannot find symbol
+2994:/home/runner/work/BradarGram/BradarGram/TMessagesProj/src/main/java/org/telegram/ui/FerrumBannerEditor.java:213: error: incompatible types: possible lossy conversion from float to int
+2997:Note: Some input files use or override a deprecated API.
+2998:Note: Recompile with -Xlint:deprecation for details.
+2999:Note: Some input files use unchecked or unsafe operations.
+3000:Note: Recompile with -Xlint:unchecked for details.
+=== last 150 lines of build.log ===
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.run(DefaultBuildOperationRunner.java:48)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeAction(TaskExecution.java:229)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeActions(TaskExecution.java:212)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.executeWithPreviousOutputFiles(TaskExecution.java:195)
+	at org.gradle.api.internal.tasks.execution.TaskExecution.execute(TaskExecution.java:162)
+	at org.gradle.internal.execution.steps.ExecuteStep.executeInternal(ExecuteStep.java:105)
+	at org.gradle.internal.execution.steps.ExecuteStep.access$000(ExecuteStep.java:44)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:59)
+	at org.gradle.internal.execution.steps.ExecuteStep$1.call(ExecuteStep.java:56)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:56)
+	at org.gradle.internal.execution.steps.ExecuteStep.execute(ExecuteStep.java:44)
+	at org.gradle.internal.execution.steps.CancelExecutionStep.execute(CancelExecutionStep.java:42)
+	at org.gradle.internal.execution.steps.TimeoutStep.executeWithoutTimeout(TimeoutStep.java:75)
+	at org.gradle.internal.execution.steps.TimeoutStep.execute(TimeoutStep.java:55)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:50)
+	at org.gradle.internal.execution.steps.PreCreateOutputParentsStep.execute(PreCreateOutputParentsStep.java:28)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:67)
+	at org.gradle.internal.execution.steps.RemovePreviousOutputsStep.execute(RemovePreviousOutputsStep.java:37)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:61)
+	at org.gradle.internal.execution.steps.BroadcastChangingOutputsStep.execute(BroadcastChangingOutputsStep.java:26)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:69)
+	at org.gradle.internal.execution.steps.CaptureOutputsAfterExecutionStep.execute(CaptureOutputsAfterExecutionStep.java:46)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:40)
+	at org.gradle.internal.execution.steps.ResolveInputChangesStep.execute(ResolveInputChangesStep.java:29)
+	at org.gradle.internal.execution.steps.BuildCacheStep.executeWithoutCache(BuildCacheStep.java:189)
+	at org.gradle.internal.execution.steps.BuildCacheStep.lambda$execute$1(BuildCacheStep.java:75)
+	at org.gradle.internal.Either$Right.fold(Either.java:175)
+	at org.gradle.internal.execution.caching.CachingState.fold(CachingState.java:62)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:73)
+	at org.gradle.internal.execution.steps.BuildCacheStep.execute(BuildCacheStep.java:48)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:46)
+	at org.gradle.internal.execution.steps.StoreExecutionStateStep.execute(StoreExecutionStateStep.java:35)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.executeBecause(SkipUpToDateStep.java:75)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.lambda$execute$2(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:53)
+	at org.gradle.internal.execution.steps.SkipUpToDateStep.execute(SkipUpToDateStep.java:35)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:37)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsFinishedStep.execute(MarkSnapshottingInputsFinishedStep.java:27)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:49)
+	at org.gradle.internal.execution.steps.ResolveIncrementalCachingStateStep.executeDelegate(ResolveIncrementalCachingStateStep.java:27)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:71)
+	at org.gradle.internal.execution.steps.AbstractResolveCachingStateStep.execute(AbstractResolveCachingStateStep.java:39)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:65)
+	at org.gradle.internal.execution.steps.ResolveChangesStep.execute(ResolveChangesStep.java:36)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:107)
+	at org.gradle.internal.execution.steps.ValidateStep.execute(ValidateStep.java:56)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:64)
+	at org.gradle.internal.execution.steps.AbstractCaptureStateBeforeExecutionStep.execute(AbstractCaptureStateBeforeExecutionStep.java:43)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.executeWithNonEmptySources(AbstractSkipEmptyWorkStep.java:125)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:61)
+	at org.gradle.internal.execution.steps.AbstractSkipEmptyWorkStep.execute(AbstractSkipEmptyWorkStep.java:36)
+	at org.gradle.internal.execution.steps.legacy.MarkSnapshottingInputsStartedStep.execute(MarkSnapshottingInputsStartedStep.java:38)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:36)
+	at org.gradle.internal.execution.steps.LoadPreviousExecutionStateStep.execute(LoadPreviousExecutionStateStep.java:23)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:75)
+	at org.gradle.internal.execution.steps.HandleStaleOutputsStep.execute(HandleStaleOutputsStep.java:41)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.lambda$execute$0(AssignMutableWorkspaceStep.java:35)
+	at org.gradle.api.internal.tasks.execution.TaskExecution$4.withWorkspace(TaskExecution.java:289)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:31)
+	at org.gradle.internal.execution.steps.AssignMutableWorkspaceStep.execute(AssignMutableWorkspaceStep.java:22)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:40)
+	at org.gradle.internal.execution.steps.ChoosePipelineStep.execute(ChoosePipelineStep.java:23)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.lambda$execute$2(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:67)
+	at org.gradle.internal.execution.steps.ExecuteWorkBuildOperationFiringStep.execute(ExecuteWorkBuildOperationFiringStep.java:39)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:46)
+	at org.gradle.internal.execution.steps.IdentityCacheStep.execute(IdentityCacheStep.java:34)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:48)
+	at org.gradle.internal.execution.steps.IdentifyStep.execute(IdentifyStep.java:35)
+	at org.gradle.internal.execution.impl.DefaultExecutionEngine$1.execute(DefaultExecutionEngine.java:61)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.executeIfValid(ExecuteActionsTaskExecuter.java:127)
+	at org.gradle.api.internal.tasks.execution.ExecuteActionsTaskExecuter.execute(ExecuteActionsTaskExecuter.java:116)
+	at org.gradle.api.internal.tasks.execution.ProblemsTaskPathTrackingTaskExecuter.execute(ProblemsTaskPathTrackingTaskExecuter.java:40)
+	at org.gradle.api.internal.tasks.execution.FinalizePropertiesTaskExecuter.execute(FinalizePropertiesTaskExecuter.java:46)
+	at org.gradle.api.internal.tasks.execution.ResolveTaskExecutionModeExecuter.execute(ResolveTaskExecutionModeExecuter.java:51)
+	at org.gradle.api.internal.tasks.execution.SkipTaskWithNoActionsExecuter.execute(SkipTaskWithNoActionsExecuter.java:57)
+	at org.gradle.api.internal.tasks.execution.SkipOnlyIfTaskExecuter.execute(SkipOnlyIfTaskExecuter.java:74)
+	at org.gradle.api.internal.tasks.execution.CatchExceptionTaskExecuter.execute(CatchExceptionTaskExecuter.java:36)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.executeTask(EventFiringTaskExecuter.java:77)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:55)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter$1.call(EventFiringTaskExecuter.java:52)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.api.internal.tasks.execution.EventFiringTaskExecuter.execute(EventFiringTaskExecuter.java:52)
+	at org.gradle.execution.plan.LocalTaskNodeExecutor.execute(LocalTaskNodeExecutor.java:42)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:331)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$InvokeNodeExecutorsAction.execute(DefaultTaskExecutionGraph.java:318)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.lambda$execute$0(DefaultTaskExecutionGraph.java:314)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:314)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph$BuildOperationAwareExecutionAction.execute(DefaultTaskExecutionGraph.java:303)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.execute(DefaultPlanExecutor.java:459)
+	at org.gradle.execution.plan.DefaultPlanExecutor$ExecutorWorker.run(DefaultPlanExecutor.java:376)
+	at org.gradle.execution.plan.DefaultPlanExecutor.process(DefaultPlanExecutor.java:111)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.executeWithServices(DefaultTaskExecutionGraph.java:138)
+	at org.gradle.execution.taskgraph.DefaultTaskExecutionGraph.execute(DefaultTaskExecutionGraph.java:123)
+	at org.gradle.execution.SelectedTaskExecutionAction.execute(SelectedTaskExecutionAction.java:35)
+	at org.gradle.execution.DryRunBuildExecutionAction.execute(DryRunBuildExecutionAction.java:51)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:54)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor$ExecuteTasks.call(BuildOperationFiringBuildWorkerExecutor.java:43)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperationRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.execution.BuildOperationFiringBuildWorkerExecutor.execute(BuildOperationFiringBuildWorkerExecutor.java:40)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.lambda$executeTasks$10(DefaultBuildLifecycleController.java:313)
+	at org.gradle.internal.model.StateTransitionController.doTransition(StateTransitionController.java:266)
+	at org.gradle.internal.model.StateTransitionController.lambda$tryTransition$8(StateTransitionController.java:177)
+	at org.gradle.internal.work.DefaultSynchronizer.withLock(DefaultSynchronizer.java:46)
+	at org.gradle.internal.model.StateTransitionController.tryTransition(StateTransitionController.java:177)
+	at org.gradle.internal.build.DefaultBuildLifecycleController.executeTasks(DefaultBuildLifecycleController.java:304)
+	at org.gradle.internal.build.DefaultBuildWorkGraphController$DefaultBuildWorkGraph.runWork(DefaultBuildWorkGraphController.java:220)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:263)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:127)
+	at org.gradle.composite.internal.DefaultBuildController.doRun(DefaultBuildController.java:181)
+	at org.gradle.composite.internal.DefaultBuildController.access$000(DefaultBuildController.java:50)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.lambda$run$0(DefaultBuildController.java:198)
+	at org.gradle.internal.operations.CurrentBuildOperationRef.with(CurrentBuildOperationRef.java:85)
+	at org.gradle.composite.internal.DefaultBuildController$BuildOpRunnable.run(DefaultBuildController.java:198)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:48)
+
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 31m 20s
+285 actionable tasks: 285 executed
